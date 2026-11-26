@@ -1,0 +1,1794 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>消しカス職人 - 放課後のねり消し工房</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&family=Yomogi&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --desk-wood: #5c3a21;
+      --desk-dark: #3d2412;
+      --paper-bg: #fcfaf2;
+      --paper-line: #b8d0e8;
+      --paper-margin: #e8a5a5;
+      --accent-blue: #2b6cb0;
+      --accent-orange: #dd6b20;
+      --accent-green: #2f855a;
+      --text-ink: #2d3748;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'M PLUS Rounded 1c', sans-serif;
+      background: radial-gradient(circle at 50% 30%, #7a5030 0%, #4a2e18 70%, #2e1b0d 100%);
+      color: var(--text-ink);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      overflow: hidden;
+    }
+
+    /* 木目調の机の質感ライン */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image: repeating-linear-gradient(
+        90deg,
+        rgba(0, 0, 0, 0.03) 0px,
+        rgba(0, 0, 0, 0.03) 2px,
+        transparent 2px,
+        transparent 14px
+      );
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .app-container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 540px;
+      height: 100dvh;
+      max-height: 820px;
+      display: flex;
+      flex-direction: column;
+      padding: 10px 12px 12px;
+      gap: 8px;
+    }
+
+    /* ヘッダー（文房具ラベル風） */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #fffdf7;
+      border: 2px solid #cbd5e0;
+      border-bottom: 4px solid #a0aec0;
+      border-radius: 14px;
+      padding: 7px 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.28);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .eraser-badge {
+      width: 34px;
+      height: 24px;
+      background: linear-gradient(180deg, #2b6cb0 0%, #2b6cb0 55%, #ffffff 55%, #ffffff 78%, #1a202c 78%);
+      border: 1.5px solid #2d3748;
+      border-radius: 4px;
+      position: relative;
+      box-shadow: 1px 2px 0 rgba(0,0,0,0.2);
+      flex-shrink: 0;
+    }
+    .eraser-badge::after {
+      content: "";
+      position: absolute;
+      right: -5px;
+      top: 1px;
+      width: 6px;
+      height: 19px;
+      background: #f7fafc;
+      border: 1.5px solid #2d3748;
+      border-left: none;
+      border-radius: 0 3px 3px 0;
+    }
+
+    h1 {
+      font-size: 1.05rem;
+      font-weight: 800;
+      margin: 0;
+      color: #1a202c;
+      letter-spacing: 0.03em;
+    }
+
+    .subtitle {
+      font-size: 0.68rem;
+      color: #718096;
+      font-weight: 700;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .icon-btn {
+      background: #edf2f7;
+      border: 1.5px solid #cbd5e0;
+      border-radius: 10px;
+      height: 34px;
+      padding: 0 10px;
+      font-family: inherit;
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: #2d3748;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: transform 0.08s, background 0.15s;
+    }
+    .icon-btn:active {
+      transform: scale(0.94);
+    }
+
+    /* ステータスバー */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr 1fr;
+      gap: 7px;
+    }
+
+    .stat-box {
+      background: rgba(255, 253, 247, 0.94);
+      border: 1.5px solid #cbd5e0;
+      border-radius: 12px;
+      padding: 5px 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+    }
+
+    .stat-label {
+      font-size: 0.64rem;
+      font-weight: 700;
+      color: #718096;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .stat-val {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #2b6cb0;
+      line-height: 1.2;
+    }
+
+    .stat-sub {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #4a5568;
+    }
+
+    .meter-track {
+      width: 100%;
+      height: 7px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 3px;
+    }
+
+    .meter-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #68d391, #3182ce);
+      border-radius: 999px;
+      transition: width 0.15s ease, background 0.3s ease;
+    }
+
+    /* メイン大学ノートキャンバスエリア */
+    .notebook-frame {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow:
+        0 10px 25px rgba(0, 0, 0, 0.45),
+        inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+      background: var(--paper-bg);
+      cursor: grab;
+      touch-action: none;
+    }
+
+    .notebook-frame:active {
+      cursor: grabbing;
+    }
+
+    canvas#noteCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* 警告・ヒントトースト（ノート上部） */
+    .status-toast {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(45, 55, 72, 0.88);
+      color: #fff;
+      font-size: 0.76rem;
+      font-weight: 700;
+      padding: 5px 14px;
+      border-radius: 999px;
+      pointer-events: none;
+      white-space: nowrap;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+      transition: opacity 0.25s, transform 0.25s;
+      z-index: 4;
+    }
+
+    .status-toast.warn {
+      background: rgba(221, 107, 32, 0.94);
+    }
+
+    .status-toast.good {
+      background: rgba(47, 133, 90, 0.94);
+    }
+
+    /* 机の端警告ラインラベル */
+    .desk-edge-hint {
+      position: absolute;
+      bottom: 4px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.64rem;
+      font-weight: 800;
+      color: rgba(229, 62, 62, 0.65);
+      pointer-events: none;
+      letter-spacing: 0.05em;
+    }
+
+    /* 下部ツール＆アクションバー */
+    .controls-bar {
+      display: grid;
+      grid-template-columns: 1.25fr 1fr 1fr;
+      gap: 7px;
+    }
+
+    .tool-switch {
+      display: flex;
+      background: #edf2f7;
+      border: 2px solid #cbd5e0;
+      border-radius: 12px;
+      padding: 3px;
+      gap: 3px;
+    }
+
+    .tool-btn {
+      flex: 1;
+      border: none;
+      border-radius: 9px;
+      font-family: inherit;
+      font-size: 0.76rem;
+      font-weight: 800;
+      padding: 8px 4px;
+      cursor: pointer;
+      background: transparent;
+      color: #4a5568;
+      transition: all 0.15s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      line-height: 1.15;
+    }
+
+    .tool-btn.active {
+      background: #2b6cb0;
+      color: #ffffff;
+      box-shadow: 0 2px 5px rgba(43, 108, 176, 0.35);
+    }
+
+    .tool-sub {
+      font-size: 0.58rem;
+      font-weight: 700;
+      opacity: 0.85;
+    }
+
+    .action-btn {
+      border: none;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 800;
+      padding: 8px 6px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      line-height: 1.15;
+      transition: transform 0.08s, box-shadow 0.08s, opacity 0.15s;
+    }
+
+    .action-btn:active:not(:disabled) {
+      transform: translateY(2px);
+    }
+
+    .action-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-erase {
+      background: linear-gradient(180deg, #ffffff 0%, #e2e8f0 100%);
+      color: #1a202c;
+      border: 2px solid #718096;
+      box-shadow: 0 3px 0 #718096;
+    }
+
+    .btn-finish {
+      background: linear-gradient(180deg, #48bb78 0%, #2f855a 100%);
+      color: #ffffff;
+      border: 2px solid #22543d;
+      box-shadow: 0 3px 0 #22543d;
+    }
+
+    /* オーバーレイモーダル（開始・結果鑑定） */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(34, 24, 16, 0.78);
+      backdrop-filter: blur(3px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 20;
+      transition: opacity 0.25s ease;
+    }
+
+    .overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .modal-card {
+      background: #fcfaf2;
+      border: 3px solid #2d3748;
+      border-radius: 18px;
+      padding: 20px 18px;
+      width: 100%;
+      max-width: 350px;
+      text-align: center;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+      position: relative;
+    }
+
+    .modal-title {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #1a202c;
+      margin: 0 0 8px;
+    }
+
+    .modal-body {
+      font-size: 0.84rem;
+      line-height: 1.55;
+      color: #4a5568;
+      margin: 0 0 14px;
+    }
+
+    .tips-list {
+      text-align: left;
+      background: #edf2f7;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 0.78rem;
+      color: #2d3748;
+      margin-bottom: 14px;
+      line-height: 1.5;
+    }
+
+    .rank-card {
+      background: #fffbeb;
+      border: 2px dashed #d69e2e;
+      border-radius: 14px;
+      padding: 12px;
+      margin-bottom: 14px;
+    }
+
+    .rank-badge {
+      display: inline-block;
+      background: #d69e2e;
+      color: #fff;
+      font-size: 0.68rem;
+      font-weight: 800;
+      padding: 2px 10px;
+      border-radius: 999px;
+      margin-bottom: 4px;
+    }
+
+    .rank-name {
+      font-size: 1.28rem;
+      font-weight: 800;
+      color: #b7791f;
+      margin: 2px 0 8px;
+    }
+
+    .result-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      font-size: 0.74rem;
+    }
+
+    .metric-item {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 5px 4px;
+    }
+
+    .metric-num {
+      display: block;
+      font-size: 1rem;
+      font-weight: 800;
+      color: #2d3748;
+    }
+
+    .modal-btn-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-main {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 0.96rem;
+      font-weight: 800;
+      color: #fff;
+      background: linear-gradient(180deg, #3182ce 0%, #2b6cb0 100%);
+      box-shadow: 0 4px 0 #1a365d;
+      cursor: pointer;
+    }
+
+    .btn-main:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #1a365d;
+    }
+
+    .btn-secondary {
+      padding: 12px 14px;
+      border: 2px solid #cbd5e0;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 0.86rem;
+      font-weight: 800;
+      color: #4a5568;
+      background: #ffffff;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- ヘッダー -->
+    <header>
+      <div class="brand">
+        <div class="eraser-badge" aria-hidden="true"></div>
+        <div>
+          <h1>消しカス職人</h1>
+          <div class="subtitle">放課後のねり消し工房</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="modeToggleBtn" class="icon-btn" title="モード切替">♾️ 無限モード</button>
+        <button id="soundBtn" class="icon-btn" title="効果音 ON/OFF">🔊</button>
+      </div>
+    </header>
+
+    <!-- ステータスバー -->
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-label">
+          <span>最大ねり消し</span>
+          <span id="massStageLabel">粒レベル</span>
+        </div>
+        <div>
+          <span id="maxSizeDisplay" class="stat-val">0.0</span>
+          <span class="stat-sub">mm</span>
+        </div>
+      </div>
+
+      <div class="stat-box">
+        <div class="stat-label">
+          <span>ねばり・練り度</span>
+          <span id="cohesionPct">0%</span>
+        </div>
+        <div class="meter-track">
+          <div id="cohesionBar" class="meter-fill"></div>
+        </div>
+        <div class="stat-sub" style="font-size: 0.62rem; margin-top: 2px;" id="cohesionHint">ゆっくり練ろう</div>
+      </div>
+
+      <div class="stat-box">
+        <div class="stat-label">
+          <span>ノート上の粒</span>
+          <span id="lostCountLabel" style="color:#e53e3e;">落下 0</span>
+        </div>
+        <div>
+          <span id="particleCountDisplay" class="stat-val" style="color:#2f855a;">0</span>
+          <span class="stat-sub">個</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- メインノートキャンバス -->
+    <div class="notebook-frame" id="notebookFrame">
+      <canvas id="noteCanvas"></canvas>
+
+      <div id="statusToast" class="status-toast">指でなぞって消しカスを中央に集めよう！</div>
+      <div class="desk-edge-hint">▼ ノートの端（机のフチ）から落とさないよう注意 ▼</div>
+
+      <!-- スタート画面 -->
+      <div id="startOverlay" class="overlay">
+        <div class="modal-card">
+          <h2 class="modal-title">✏️ 消しカス職人</h2>
+          <p class="modal-body">
+            ノートに散らばった消しカスを集めて、ギュッと練り固めて立派な「ねり消し」を作ろう！
+          </p>
+          <div class="tips-list">
+            <b>👆 指先モード：</b> 狭い範囲をギュッと押し固めて合体！<br>
+            <b>📏 定規モード：</b> 広範囲のカスを一気に掃き集める！<br>
+            <b>⚠️ 乱暴に擦りすぎ注意：</b> 練り度が低いまま速く弾くと<b>「ボロッ！」</b>と砕けます。ゆっくり丁寧にこねよう！
+          </div>
+          <button id="startGameBtn" class="btn-main">ノートを開く（スタート）</button>
+        </div>
+      </div>
+
+      <!-- 鑑定結果画面 -->
+      <div id="resultOverlay" class="overlay hidden">
+        <div class="modal-card">
+          <h2 class="modal-title">📋 ねり消し鑑定書</h2>
+          <div class="rank-card">
+            <span class="rank-badge">職人ランク認定</span>
+            <div id="resultRankName" class="rank-name">一人前の消しカス団子</div>
+            <div class="result-metrics">
+              <div class="metric-item">
+                <span class="metric-num" id="resDiameter">14.2mm</span>
+                大きさ
+              </div>
+              <div class="metric-item">
+                <span class="metric-num" id="resCohesion">78%</span>
+                ねばり度
+              </div>
+              <div class="metric-item">
+                <span class="metric-num" id="resDarkness">濃黒</span>
+                黒鉛のツヤ
+              </div>
+            </div>
+          </div>
+          <p id="resultComment" class="modal-body" style="margin-bottom: 14px;">
+            丁寧に練り込まれていて、机の上で転がしても崩れない絶妙な仕上がり！
+          </p>
+          <div class="modal-btn-group">
+            <button id="continueBtn" class="btn-secondary">まだこねる</button>
+            <button id="restartBtn" class="btn-main">新しいページへ</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 下部ツール＆アクションバー -->
+    <div class="controls-bar">
+      <div class="tool-switch" role="group" aria-label="道具切替">
+        <button id="toolFingerBtn" class="tool-btn active">
+          <span>👆 指先</span>
+          <span class="tool-sub">押し固め◎</span>
+        </button>
+        <button id="toolRulerBtn" class="tool-btn">
+          <span>📏 定規</span>
+          <span class="tool-sub">広域集め◎</span>
+        </button>
+      </div>
+
+      <button id="moreEraseBtn" class="action-btn btn-erase">
+        <span>🧽 もっと消す</span>
+        <span id="eraseChargeLabel" class="tool-sub">補充する (∞)</span>
+      </button>
+
+      <button id="finishBtn" class="action-btn btn-finish">
+        <span>✨ 完成・鑑定</span>
+        <span class="tool-sub">出来栄えを見る</span>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * 消しカス職人 - 放課後のねり消し工房
+     * 粒子の凝縮合体・練り込み結合度・高速摩擦による崩壊・消しゴム追加補充アニメーションを実装
+     */
+    (() => {
+      // ==========================================
+      // 1. サウンドエンジン (Web Audio API)
+      // ==========================================
+      class DeskAudio {
+        constructor() {
+          this.ctx = null;
+          this.muted = false;
+          this.lastRubTime = 0;
+          this.lastMergeTime = 0;
+        }
+
+        init() {
+          if (!this.ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) this.ctx = new AudioCtx();
+          }
+          if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume();
+          }
+        }
+
+        toggle() {
+          this.muted = !this.muted;
+          return this.muted;
+        }
+
+        // ノートの上を指や定規で擦る「サッサッ」音（ホワイトノイズ＋バンドパス）
+        playRub(speed = 1) {
+          if (this.muted) return;
+          const nowMs = performance.now();
+          if (nowMs - this.lastRubTime < 75) return;
+          this.lastRubTime = nowMs;
+
+          this.init();
+          if (!this.ctx) return;
+
+          const now = this.ctx.currentTime;
+          const duration = 0.065;
+          const bufferSize = Math.floor(this.ctx.sampleRate * duration);
+          const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.sin((i / bufferSize) * Math.PI);
+          }
+
+          const noise = this.ctx.createBufferSource();
+          noise.buffer = buffer;
+
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'bandpass';
+          filter.frequency.setValueAtTime(1400 + Math.min(1800, speed * 90), now);
+          filter.Q.setValueAtTime(1.8, now);
+
+          const gain = this.ctx.createGain();
+          const vol = Math.min(0.14, 0.03 + speed * 0.006);
+          gain.gain.setValueAtTime(vol, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+          noise.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          noise.start(now);
+        }
+
+        // カス同士が「ギュッ」と合体・成長する音
+        playMerge(mass = 1) {
+          if (this.muted) return;
+          const nowMs = performance.now();
+          if (nowMs - this.lastMergeTime < 65) return;
+          this.lastMergeTime = nowMs;
+
+          this.init();
+          if (!this.ctx) return;
+
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+
+          const baseFreq = Math.max(150, 380 - Math.min(200, mass * 3.5));
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(baseFreq, now);
+          osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.45, now + 0.07);
+
+          gain.gain.setValueAtTime(0.11, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.09);
+        }
+
+        // 練り不足の塊が「ボロッ・パラパラ」と砕ける音
+        playCrumble() {
+          if (this.muted) return;
+          this.init();
+          if (!this.ctx) return;
+
+          const now = this.ctx.currentTime;
+          for (let i = 0; i < 4; i++) {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            const start = now + i * 0.032;
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(260 - i * 35, start);
+            osc.frequency.exponentialRampToValueAtTime(75, start + 0.08);
+
+            gain.gain.setValueAtTime(0.14, start);
+            gain.gain.exponentialRampToValueAtTime(0.001, start + 0.09);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(start);
+            osc.stop(start + 0.095);
+          }
+        }
+
+        // 大きな消しゴムでゴシゴシ消す音
+        playEraserScrub() {
+          if (this.muted) return;
+          this.init();
+          if (!this.ctx) return;
+
+          const now = this.ctx.currentTime;
+          for (let i = 0; i < 4; i++) {
+            const start = now + i * 0.13;
+            const dur = 0.1;
+            const bufSize = Math.floor(this.ctx.sampleRate * dur);
+            const buf = this.ctx.createBuffer(1, bufSize, this.ctx.sampleRate);
+            const ch = buf.getChannelData(0);
+            for (let j = 0; j < bufSize; j++) {
+              ch[j] = (Math.random() * 2 - 1) * Math.sin((j / bufSize) * Math.PI);
+            }
+            const src = this.ctx.createBufferSource();
+            src.buffer = buf;
+
+            const filter = this.ctx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.setValueAtTime(950 + (i % 2) * 350, start);
+
+            const gain = this.ctx.createGain();
+            gain.gain.setValueAtTime(0.18, start);
+            gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
+
+            src.connect(filter);
+            filter.connect(gain);
+            gain.connect(this.ctx.destination);
+            src.start(start);
+          }
+        }
+      }
+
+      const audio = new DeskAudio();
+
+      // ==========================================
+      // 2. Canvas & ゲーム状態管理
+      // ==========================================
+      const canvas = document.getElementById('noteCanvas');
+      const ctx = canvas.getContext('2d');
+      const notebookFrame = document.getElementById('notebookFrame');
+
+      // UI要素
+      const maxSizeDisplay = document.getElementById('maxSizeDisplay');
+      const massStageLabel = document.getElementById('massStageLabel');
+      const cohesionPctEl = document.getElementById('cohesionPct');
+      const cohesionBar = document.getElementById('cohesionBar');
+      const cohesionHint = document.getElementById('cohesionHint');
+      const particleCountDisplay = document.getElementById('particleCountDisplay');
+      const lostCountLabel = document.getElementById('lostCountLabel');
+      const statusToast = document.getElementById('statusToast');
+
+      const toolFingerBtn = document.getElementById('toolFingerBtn');
+      const toolRulerBtn = document.getElementById('toolRulerBtn');
+      const moreEraseBtn = document.getElementById('moreEraseBtn');
+      const eraseChargeLabel = document.getElementById('eraseChargeLabel');
+      const finishBtn = document.getElementById('finishBtn');
+      const modeToggleBtn = document.getElementById('modeToggleBtn');
+
+      const startOverlay = document.getElementById('startOverlay');
+      const resultOverlay = document.getElementById('resultOverlay');
+
+      let width = 420;
+      let height = 560;
+
+      // モード設定: 'INFINITE' (無限こねこねモード) | 'LIMITED' (補充3回制限の職人チャレンジ)
+      let gameMode = 'INFINITE';
+      let eraseCharges = Infinity;
+      let activeTool = 'FINGER'; // 'FINGER' | 'RULER'
+      let lostParticles = 0;
+
+      // 消しカス粒子配列
+      // 各要素: { x, y, vx, vy, mass, radius, cohesion, graphite, bumps: [{ang, rRatio}], angle, angVel }
+      let crumbs = [];
+      let fxEffects = []; // 合体リングや崩壊破片の視覚演出
+
+      // 鉛筆の落書き（ノート背景に薄く描画され、消しゴムで消える演出にも活用）
+      let pencilScribbles = [];
+
+      // 大きな消しゴム自動ゴシゴシ演出
+      let eraserAnim = {
+        active: false,
+        progress: 0,
+        startX: 0,
+        startY: 0,
+        targetX: 0,
+        targetY: 0,
+        spawnedCount: 0
+      };
+
+      // プレイヤーのポインター状態
+      const pointer = {
+        down: false,
+        x: -200,
+        y: -200,
+        prevX: -200,
+        prevY: -200,
+        vx: 0,
+        vy: 0,
+        speed: 0
+      };
+
+      let toastTimer = null;
+      function showToast(text, type = 'normal', duration = 2200) {
+        statusToast.textContent = text;
+        statusToast.className = 'status-toast';
+        if (type === 'warn') statusToast.classList.add('warn');
+        if (type === 'good') statusToast.classList.add('good');
+        statusToast.style.opacity = '1';
+
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          statusToast.style.opacity = '0.78';
+        }, duration);
+      }
+
+      // ==========================================
+      // 3. レスポンシブCanvasリサイズ＆ノート落書き生成
+      // ==========================================
+      function generatePencilScribbles() {
+        pencilScribbles = [];
+        const texts = ['数学 演習ノート', 'y = ax² + bx + c', '英単語テスト 金曜', '☆', 'φ(.. )'];
+        for (let i = 0; i < 4; i++) {
+          pencilScribbles.push({
+            x: 55 + Math.random() * (width - 140),
+            y: 70 + Math.random() * (height - 150),
+            text: texts[i % texts.length],
+            alpha: 0.22 + Math.random() * 0.14,
+            rot: (Math.random() - 0.5) * 0.08
+          });
+        }
+      }
+
+      function resizeCanvas() {
+        const rect = notebookFrame.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const oldW = width;
+        const oldH = height;
+
+        width = rect.width;
+        height = rect.height;
+
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        // 既存の消しカス位置を比率維持で調整
+        if (oldW > 0 && oldH > 0 && crumbs.length > 0) {
+          const sx = width / oldW;
+          const sy = height / oldH;
+          crumbs.forEach((c) => {
+            c.x *= sx;
+            c.y *= sy;
+          });
+        }
+        if (pencilScribbles.length === 0) {
+          generatePencilScribbles();
+        }
+      }
+
+      window.addEventListener('resize', resizeCanvas);
+      resizeCanvas();
+
+      // ==========================================
+      // 4. 消しカス生成＆ゴツゴツ・もちもち形状データ
+      // ==========================================
+      function createBumpProfile(count = 10) {
+        const bumps = [];
+        for (let i = 0; i < count; i++) {
+          bumps.push({
+            ang: (i / count) * Math.PI * 2,
+            rRatio: 0.84 + Math.random() * 0.30
+          });
+        }
+        return bumps;
+      }
+
+      function massToRadius(mass) {
+        // 面積が質量に比例するよう平方根スケールで半径計算
+        return Math.max(2.6, Math.sqrt(mass) * 3.1);
+      }
+
+      function spawnCrumb(x, y, mass = 1, cohesion = 0.08, graphite = 0.35) {
+        return {
+          x,
+          y,
+          vx: (Math.random() - 0.5) * 1.4,
+          vy: (Math.random() - 0.5) * 1.4,
+          mass,
+          radius: massToRadius(mass),
+          cohesion: Math.min(1, Math.max(0, cohesion)), // 0.0〜1.0（高いほど砕けにくい）
+          graphite: Math.min(1, Math.max(0.1, graphite)), // 0.1〜1.0（黒鉛の練り込み度）
+          bumps: createBumpProfile(mass > 12 ? 14 : 9),
+          angle: Math.random() * Math.PI * 2,
+          angVel: 0
+        };
+      }
+
+      function scatterInitialCrumbs(count = 95) {
+        crumbs = [];
+        lostParticles = 0;
+        const cx = width / 2;
+        const cy = height / 2;
+        for (let i = 0; i < count; i++) {
+          // ノートの中央〜やや広めに散らす（端すぎないよう配慮）
+          const ang = Math.random() * Math.PI * 2;
+          const dist = Math.pow(Math.random(), 0.65) * Math.min(width, height) * 0.38;
+          const x = Math.min(width - 28, Math.max(36, cx + Math.cos(ang) * dist));
+          const y = Math.min(height - 34, Math.max(44, cy + Math.sin(ang) * dist));
+          const mass = 0.8 + Math.random() * 0.7;
+          const graphite = 0.25 + Math.random() * 0.45;
+          crumbs.push(spawnCrumb(x, y, mass, 0.06, graphite));
+        }
+        updateStatsUI();
+      }
+
+      // 「もっと消す」ボタンの大きな消しゴムゴシゴシ補充
+      function triggerMoreErase() {
+        if (eraserAnim.active) return;
+        if (gameMode === 'LIMITED' && eraseCharges <= 0) {
+          showToast('消しゴムの補充回数を使い切りました！', 'warn');
+          return;
+        }
+
+        if (gameMode === 'LIMITED') {
+          eraseCharges--;
+        }
+        updateEraseButtonUI();
+        audio.playEraserScrub();
+
+        eraserAnim.active = true;
+        eraserAnim.progress = 0;
+        eraserAnim.targetX = width * (0.28 + Math.random() * 0.44);
+        eraserAnim.targetY = height * (0.25 + Math.random() * 0.42);
+        eraserAnim.spawnedCount = 0;
+        showToast('消しゴムでゴシゴシ！新しいカスが出た！', 'good', 1800);
+      }
+
+      function updateEraseButtonUI() {
+        if (gameMode === 'INFINITE') {
+          eraseChargeLabel.textContent = '補充する (∞)';
+          moreEraseBtn.disabled = false;
+        } else {
+          eraseChargeLabel.textContent = `残り ${eraseCharges} 回`;
+          moreEraseBtn.disabled = eraseCharges <= 0;
+        }
+      }
+
+      // ==========================================
+      // 5. 物理シミュレーション（押し集め・合体・練り込み・崩壊）
+      // ==========================================
+      function shatterCrumb(index) {
+        const target = crumbs[index];
+        if (!target || target.mass < 3.5) return;
+
+        audio.playCrumble();
+        showToast('速く擦りすぎてボロッと崩れた！ゆっくり練ろう', 'warn', 2400);
+
+        // 崩壊エフェクトリング
+        fxEffects.push({
+          x: target.x,
+          y: target.y,
+          radius: target.radius,
+          maxRadius: target.radius * 2.2,
+          alpha: 0.85,
+          color: '#e53e3e'
+        });
+
+        // 元の質量を細かい粒に再分割して飛び散らせる
+        const pieces = Math.min(26, Math.max(6, Math.floor(target.mass / 1.4)));
+        const pieceMass = target.mass / pieces;
+        const newCohesion = Math.max(0.05, target.cohesion * 0.35);
+
+        crumbs.splice(index, 1);
+
+        for (let i = 0; i < pieces; i++) {
+          const ang = (i / pieces) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
+          const spd = 2.2 + Math.random() * 4.5;
+          const child = spawnCrumb(
+            target.x + Math.cos(ang) * (target.radius * 0.5),
+            target.y + Math.sin(ang) * (target.radius * 0.5),
+            pieceMass,
+            newCohesion,
+            target.graphite
+          );
+          child.vx = Math.cos(ang) * spd;
+          child.vy = Math.sin(ang) * spd;
+          crumbs.push(child);
+        }
+      }
+
+      function updatePhysics() {
+        // 1. 大きな消しゴム補充アニメーションの更新
+        if (eraserAnim.active) {
+          eraserAnim.progress += 0.028;
+          const scrubPhase = Math.sin(eraserAnim.progress * Math.PI * 6);
+          const ex = eraserAnim.targetX + scrubPhase * 46;
+          const ey = eraserAnim.targetY + Math.cos(eraserAnim.progress * Math.PI * 3) * 18;
+
+          // 擦っている位置からポロポロと新しい消しカスを生成
+          if (eraserAnim.spawnedCount < 48 && Math.random() < 0.85) {
+            const c = spawnCrumb(
+              ex + (Math.random() - 0.5) * 28,
+              ey + (Math.random() - 0.5) * 22,
+              0.9 + Math.random() * 0.7,
+              0.07,
+              0.3 + Math.random() * 0.5
+            );
+            c.vx = (Math.random() - 0.5) * 2.8;
+            c.vy = (Math.random() - 0.5) * 2.8;
+            crumbs.push(c);
+            eraserAnim.spawnedCount++;
+          }
+
+          if (eraserAnim.progress >= 1) {
+            eraserAnim.active = false;
+          }
+        }
+
+        // 2. ポインター（指先 or 定規）と消しカスの相互作用
+        const isRuler = activeTool === 'RULER';
+        const toolRadius = isRuler ? 48 : 24;
+        const pushStrength = isRuler ? 0.58 : 0.45;
+        const kneadPower = isRuler ? 0.0025 : 0.011; // 指先の方が圧倒的に練り込みやすい
+
+        if (pointer.down) {
+          if (pointer.speed > 0.8) {
+            audio.playRub(pointer.speed);
+          }
+
+          for (let i = crumbs.length - 1; i >= 0; i--) {
+            const c = crumbs[i];
+            let dx = c.x - pointer.x;
+            let dy = c.y - pointer.y;
+            let dist = Math.hypot(dx, dy);
+
+            // 定規モードは横長の当たり判定で広く掃き集められる
+            if (isRuler) {
+              dx *= 0.52;
+              dy *= 1.25;
+              dist = Math.hypot(dx, dy);
+            }
+
+            const contactDist = toolRadius + c.radius;
+            if (dist < contactDist) {
+              // 結合度が低い大きな塊を高速で乱暴に弾くと砕ける！
+              const shatterThreshold = 13 + c.cohesion * 26;
+              if (c.mass >= 5.5 && pointer.speed > shatterThreshold) {
+                shatterCrumb(i);
+                continue;
+              }
+
+              const nx = dist > 0.001 ? dx / dist : (Math.random() - 0.5);
+              const ny = dist > 0.001 ? dy / dist : (Math.random() - 0.5);
+              const overlap = contactDist - dist;
+
+              // 押し出し＆ドラッグ方向への引き寄せ
+              c.vx += nx * overlap * 0.14 * pushStrength + pointer.vx * 0.18;
+              c.vy += ny * overlap * 0.14 * pushStrength + pointer.vy * 0.18;
+              c.angVel += (pointer.vx * ny - pointer.vy * nx) * 0.0025;
+
+              // ゆっくり丁寧にこねているときは「結合度（ねばり）」と「黒鉛のツヤ」が上昇！
+              if (pointer.speed < 14) {
+                c.cohesion = Math.min(1, c.cohesion + kneadPower * (1 + overlap * 0.05));
+                c.graphite = Math.min(1, c.graphite + kneadPower * 0.45);
+              }
+            }
+          }
+        }
+
+        // 3. 粒子同士の衝突・凝縮合体（押し固め）ロジック
+        for (let i = 0; i < crumbs.length; i++) {
+          const a = crumbs[i];
+          if (!a) continue;
+
+          for (let j = i + 1; j < crumbs.length; j++) {
+            const b = crumbs[j];
+            if (!b) continue;
+
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const dist = Math.hypot(dx, dy);
+            const minDist = a.radius + b.radius;
+
+            if (dist < minDist && dist > 0.0001) {
+              const nx = dx / dist;
+              const ny = dy / dist;
+              const overlap = minDist - dist;
+
+              // 2つの粒子が押し付けられている（またはポインター付近で圧縮されている）か判定
+              const relVx = a.vx - b.vx;
+              const relVy = a.vy - b.vy;
+              const closingSpeed = relVx * nx + relVy * ny;
+
+              const nearPointer =
+                pointer.down &&
+                (Math.hypot(a.x - pointer.x, a.y - pointer.y) < toolRadius + a.radius + 18 ||
+                  Math.hypot(b.x - pointer.x, b.y - pointer.y) < toolRadius + b.radius + 18);
+
+              // 押し固め条件：指/定規の近くで押し合わされている、または程よい速度でぶつかった
+              const avgCohesion = (a.cohesion + b.cohesion) * 0.5;
+              const canMerge =
+                (nearPointer && overlap > minDist * 0.14) ||
+                (closingSpeed > 0.35 && closingSpeed < 11 && avgCohesion > 0.12);
+
+              if (canMerge && a.mass + b.mass <= 260) {
+                // 質量保存で合体！
+                const totalMass = a.mass + b.mass;
+                a.x = (a.x * a.mass + b.x * b.mass) / totalMass;
+                a.y = (a.y * a.mass + b.y * b.mass) / totalMass;
+                a.vx = (a.vx * a.mass + b.vx * b.mass) / totalMass;
+                a.vy = (a.vy * a.mass + b.vy * b.mass) / totalMass;
+
+                // 合体直後は少し結合度が馴染むまで下がりつつ、練り込みで上がる
+                const weightedCoh = (a.cohesion * a.mass + b.cohesion * b.mass) / totalMass;
+                a.cohesion = Math.min(1, weightedCoh * 0.94 + (isRuler ? 0.01 : 0.035));
+                a.graphite = (a.graphite * a.mass + b.graphite * b.mass) / totalMass;
+                a.mass = totalMass;
+                a.radius = massToRadius(a.mass);
+                a.bumps = createBumpProfile(a.mass > 12 ? 14 : 10);
+
+                if (a.mass > 4) {
+                  audio.playMerge(a.mass);
+                  fxEffects.push({
+                    x: a.x,
+                    y: a.y,
+                    radius: a.radius * 0.8,
+                    maxRadius: a.radius * 1.45,
+                    alpha: 0.55,
+                    color: '#3182ce'
+                  });
+                }
+
+                crumbs.splice(j, 1);
+                j--;
+                continue;
+              }
+
+              // 合体しない場合はソフトな反発で押し合う
+              const totalM = a.mass + b.mass;
+              const ratioA = b.mass / totalM;
+              const ratioB = a.mass / totalM;
+              const repel = overlap * 0.28;
+
+              a.x -= nx * repel * ratioA;
+              a.y -= ny * repel * ratioA;
+              b.x += nx * repel * ratioB;
+              b.y += ny * repel * ratioB;
+
+              a.vx -= nx * repel * 0.15 * ratioA;
+              a.vy -= ny * repel * 0.15 * ratioA;
+              b.vx += nx * repel * 0.15 * ratioB;
+              b.vy += ny * repel * 0.15 * ratioB;
+            }
+          }
+        }
+
+        // 4. 位置更新・紙の摩擦減衰・ノートの端からの落下判定
+        const topSafeY = 14;
+        for (let i = crumbs.length - 1; i >= 0; i--) {
+          const c = crumbs[i];
+
+          // 大学ノートの紙面の摩擦（大きい団子ほど転がりやすいが、基本は紙の抵抗で止まる）
+          const friction = c.mass > 15 ? 0.87 : 0.81;
+          c.vx *= friction;
+          c.vy *= friction;
+          c.angVel *= 0.85;
+
+          c.x += c.vx;
+          c.y += c.vy;
+          c.angle += c.angVel;
+
+          // 上端（リング・綴じ側）は軽い壁として跳ね返す
+          if (c.y - c.radius < topSafeY) {
+            c.y = topSafeY + c.radius;
+            c.vy = Math.abs(c.vy) * 0.4;
+          }
+
+          // 左端・右端・下端（机のフチ）から一定以上はみ出すと「床に落ちた！」
+          const fellOff =
+            c.x < -c.radius * 0.35 ||
+            c.x > width + c.radius * 0.35 ||
+            c.y > height + c.radius * 0.35;
+
+          if (fellOff) {
+            const lostAmt = Math.max(1, Math.round(c.mass));
+            lostParticles += lostAmt;
+            if (c.mass >= 6) {
+              showToast('あっ！せっかくの団子が机から床に落ちた！', 'warn', 2400);
+              audio.playCrumble();
+            }
+            crumbs.splice(i, 1);
+          }
+        }
+
+        // エフェクト更新
+        for (let i = fxEffects.length - 1; i >= 0; i--) {
+          const fx = fxEffects[i];
+          fx.radius += (fx.maxRadius - fx.radius) * 0.22;
+          fx.alpha -= 0.045;
+          if (fx.alpha <= 0) fxEffects.splice(i, 1);
+        }
+
+        // ポインター速度の減衰
+        pointer.vx *= 0.6;
+        pointer.vy *= 0.6;
+        pointer.speed = Math.hypot(pointer.vx, pointer.vy);
+      }
+
+      // ==========================================
+      // 6. 大学ノート＆消しカス質感のある描画
+      // ==========================================
+      function drawNotebookBackground() {
+        // クリームがかった上質紙ベース
+        ctx.fillStyle = '#fcfaf2';
+        ctx.fillRect(0, 0, width, height);
+
+        // 紙の微細な陰影（ノートの端の立体感）
+        const edgeShadow = ctx.createLinearGradient(0, 0, 28, 0);
+        edgeShadow.addColorStop(0, 'rgba(160, 150, 130, 0.22)');
+        edgeShadow.addColorStop(1, 'rgba(160, 150, 130, 0)');
+        ctx.fillStyle = edgeShadow;
+        ctx.fillRect(0, 0, 28, height);
+
+        // B5大学ノートの横罫線（7mm間隔イメージ = 約26px）
+        const lineSpacing = 26;
+        const headerY = 44;
+
+        // 上部のタイトル欄太線
+        ctx.strokeStyle = '#9bbad8';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(16, headerY);
+        ctx.lineTo(width - 16, headerY);
+        ctx.stroke();
+
+        // DATE / NO. 風の薄い印字
+        ctx.fillStyle = '#9bbad8';
+        ctx.font = 'bold 9px sans-serif';
+        ctx.fillText('DATE', width - 95, headerY - 16);
+        ctx.fillText('NO.', width - 95, headerY - 5);
+
+        // 横罫線
+        ctx.strokeStyle = '#cbe0f5';
+        ctx.lineWidth = 1;
+        for (let y = headerY + lineSpacing; y < height - 12; y += lineSpacing) {
+          ctx.beginPath();
+          ctx.moveTo(16, y);
+          ctx.lineTo(width - 16, y);
+          ctx.stroke();
+
+          // 行中央の薄いドットガイド（キャンパスノート風）
+          ctx.fillStyle = '#b6d2ed';
+          for (let dx = 56; dx < width - 24; dx += 40) {
+            ctx.fillRect(dx, y - 0.5, 1.5, 1.5);
+          }
+        }
+
+        // 左側の赤いマージン縦線
+        ctx.strokeStyle = 'rgba(229, 138, 138, 0.55)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(36, 12);
+        ctx.lineTo(36, height - 12);
+        ctx.stroke();
+
+        // ルーズリーフのパンチ穴（左端）
+        ctx.fillStyle = '#5c3a21';
+        for (let hy = 68; hy < height - 40; hy += 78) {
+          ctx.beginPath();
+          ctx.arc(16, hy, 5.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+
+        // 薄い鉛筆の落書き
+        ctx.save();
+        ctx.font = '15px "Yomogi", cursive, sans-serif';
+        pencilScribbles.forEach((s) => {
+          ctx.save();
+          ctx.translate(s.x, s.y);
+          ctx.rotate(s.rot);
+          ctx.fillStyle = `rgba(90, 98, 110, ${s.alpha})`;
+          ctx.fillText(s.text, 0, 0);
+          ctx.restore();
+        });
+        ctx.restore();
+
+        // 机の端（落下危険ゾーン）の点線サイン
+        ctx.save();
+        ctx.strokeStyle = 'rgba(229, 62, 62, 0.25)';
+        ctx.setLineDash([5, 5]);
+        ctx.lineWidth = 1.2;
+        ctx.strokeRect(4, 4, width - 8, height - 8);
+        ctx.restore();
+      }
+
+      function drawCrumb(c) {
+        ctx.save();
+        ctx.translate(c.x, c.y);
+
+        // 紙に落ちる影
+        ctx.save();
+        ctx.translate(2, 2.5);
+        ctx.rotate(c.angle);
+        ctx.fillStyle = 'rgba(45, 55, 72, 0.18)';
+        drawOrganicBlobPath(ctx, c.radius, c.bumps, c.cohesion);
+        ctx.fill();
+        ctx.restore();
+
+        // 本体描画
+        ctx.rotate(c.angle);
+
+        // 色味：黒鉛の練り込み度(graphite)に応じて「白っぽいカス」→「濃グレー」→「ツヤ黒」へ変化
+        const shade = Math.round(232 - c.graphite * 165); // 232(白灰) 〜 67(濃黒)
+        const highlight = Math.min(255, shade + 42);
+        const shadow = Math.max(25, shade - 38);
+
+        const grad = ctx.createRadialGradient(
+          -c.radius * 0.3,
+          -c.radius * 0.3,
+          c.radius * 0.1,
+          0,
+          0,
+          c.radius * 1.15
+        );
+        grad.addColorStop(0, `rgb(${highlight}, ${highlight}, ${highlight + 3})`);
+        grad.addColorStop(0.65, `rgb(${shade}, ${shade}, ${shade + 2})`);
+        grad.addColorStop(1, `rgb(${shadow}, ${shadow}, ${shadow})`);
+
+        ctx.fillStyle = grad;
+        drawOrganicBlobPath(ctx, c.radius, c.bumps, c.cohesion);
+        ctx.fill();
+
+        // 輪郭線
+        ctx.strokeStyle = `rgba(30, 35, 42, ${0.35 + c.cohesion * 0.35})`;
+        ctx.lineWidth = c.radius > 10 ? 1.4 : 0.9;
+        ctx.stroke();
+
+        // 凝縮された粒のツブツブ質感（塊が大きいほど無数のカスが詰まっている描写）
+        if (c.radius > 6.5) {
+          const speckCount = Math.min(24, Math.floor(c.radius * 1.3));
+          for (let i = 0; i < speckCount; i++) {
+            const ang = (i * 2.39996) % (Math.PI * 2);
+            const dist = ((i * 0.618033) % 1) * (c.radius * 0.68);
+            const sx = Math.cos(ang) * dist;
+            const sy = Math.sin(ang) * dist;
+            ctx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.22)' : 'rgba(20,25,30,0.24)';
+            ctx.beginPath();
+            ctx.arc(sx, sy, Math.max(0.9, c.radius * 0.08), 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        // 結合度（ねばり度）が高いと、練り込まれた「ツヤ」の光沢が出る！
+        if (c.cohesion > 0.45 && c.radius > 6) {
+          ctx.fillStyle = `rgba(255, 255, 255, ${(c.cohesion - 0.4) * 0.65})`;
+          ctx.beginPath();
+          ctx.ellipse(
+            -c.radius * 0.32,
+            -c.radius * 0.34,
+            c.radius * 0.34,
+            c.radius * 0.16,
+            -0.55,
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+        }
+
+        ctx.restore();
+      }
+
+      // ゴツゴツ・もちもちした有機的ポリゴンパス生成
+      function drawOrganicBlobPath(ctx, radius, bumps, cohesion) {
+        const len = bumps.length;
+        // 結合度が高いほどゴツゴツが滑らかになり、もちもちした団子形状に近づく
+        const smoothness = 0.35 + cohesion * 0.55;
+
+        ctx.beginPath();
+        for (let i = 0; i <= len; i++) {
+          const b = bumps[i % len];
+          const rRatio = 1 + (b.rRatio - 1) * (1 - smoothness * 0.65);
+          const r = radius * rRatio;
+          const x = Math.cos(b.ang) * r;
+          const y = Math.sin(b.ang) * r;
+          if (i === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+        ctx.closePath();
+      }
+
+      function drawToolCursor() {
+        if (!pointer.down && pointer.x < 0) return;
+
+        ctx.save();
+        ctx.translate(pointer.x, pointer.y);
+
+        if (activeTool === 'FINGER') {
+          // 指先カーソル（押し固めリング）
+          const r = 24;
+          ctx.beginPath();
+          ctx.arc(0, 0, r, 0, Math.PI * 2);
+          ctx.fillStyle = pointer.down ? 'rgba(49, 130, 206, 0.18)' : 'rgba(49, 130, 206, 0.08)';
+          ctx.fill();
+          ctx.strokeStyle = pointer.down ? 'rgba(43, 108, 176, 0.85)' : 'rgba(43, 108, 176, 0.45)';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([4, 3]);
+          ctx.stroke();
+        } else {
+          // 透明プラスチック定規カーソル（15cm定規風）
+          const rw = 104;
+          const rh = 24;
+          ctx.fillStyle = pointer.down ? 'rgba(144, 205, 244, 0.42)' : 'rgba(144, 205, 244, 0.25)';
+          ctx.strokeStyle = '#2b6cb0';
+          ctx.lineWidth = 1.6;
+          ctx.beginPath();
+          ctx.roundRect(-rw / 2, -rh / 2, rw, rh, 4);
+          ctx.fill();
+          ctx.stroke();
+
+          // 定規の目盛り線
+          ctx.strokeStyle = 'rgba(26, 54, 93, 0.65)';
+          ctx.lineWidth = 1;
+          for (let x = -rw / 2 + 8; x <= rw / 2 - 8; x += 6) {
+            const tickH = x % 12 === 0 ? 7 : 4;
+            ctx.beginPath();
+            ctx.moveTo(x, -rh / 2);
+            ctx.lineTo(x, -rh / 2 + tickH);
+            ctx.stroke();
+          }
+        }
+        ctx.restore();
+      }
+
+      function drawGiantEraserAnim() {
+        if (!eraserAnim.active) return;
+
+        const scrubPhase = Math.sin(eraserAnim.progress * Math.PI * 6);
+        const ex = eraserAnim.targetX + scrubPhase * 46;
+        const ey = eraserAnim.targetY + Math.cos(eraserAnim.progress * Math.PI * 3) * 18;
+
+        ctx.save();
+        ctx.translate(ex, ey);
+        ctx.rotate(-0.22 + scrubPhase * 0.08);
+
+        // 消しゴムの影
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+        ctx.beginPath();
+        ctx.roundRect(-34, -18, 72, 42, 6);
+        ctx.fill();
+
+        // 白い消しゴム本体（先端）
+        ctx.fillStyle = '#f7fafc';
+        ctx.strokeStyle = '#2d3748';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(-38, -22, 72, 40, 6);
+        ctx.fill();
+        ctx.stroke();
+
+        // 青白黒の定番スリーブ（ケース）
+        ctx.fillStyle = '#2b6cb0';
+        ctx.fillRect(-24, -21, 56, 22);
+        ctx.fillStyle = '#1a202c';
+        ctx.fillRect(-24, 9, 56, 8);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 10px sans-serif';
+        ctx.fillText('MONO-K', -16, -6);
+
+        ctx.restore();
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, width, height);
+
+        drawNotebookBackground();
+
+        // 合体・崩壊リングエフェクト
+        fxEffects.forEach((fx) => {
+          ctx.save();
+          ctx.strokeStyle = fx.color;
+          ctx.globalAlpha = Math.max(0, fx.alpha);
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(fx.x, fx.y, fx.radius, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        });
+
+        // 小さい粒から先に描き、大きい団子が手前に来るようソート描画
+        const sorted = [...crumbs].sort((a, b) => a.mass - b.mass);
+        sorted.forEach(drawCrumb);
+
+        drawToolCursor();
+        drawGiantEraserAnim();
+      }
+
+      // ==========================================
+      // 7. ステータス計算＆ランク鑑定ロジック
+      // ==========================================
+      function getLargestCrumb() {
+        if (crumbs.length === 0) return null;
+        return crumbs.reduce((best, cur) => (cur.mass > best.mass ? cur : best), crumbs[0]);
+      }
+
+      function updateStatsUI() {
+        const largest = getLargestCrumb();
+        particleCountDisplay.textContent = crumbs.length;
+        lostCountLabel.textContent = `落下 ${lostParticles}`;
+
+        if (!largest) {
+          maxSizeDisplay.textContent = '0.0';
+          massStageLabel.textContent = 'カスなし';
+          cohesionPctEl.textContent = '0%';
+          cohesionBar.style.width = '0%';
+          cohesionHint.textContent = 'もっと消そう！';
+          return;
+        }
+
+        // 半径(px)をリアルなミリメートル(mm)感覚に変換
+        const diameterMm = Math.round(largest.radius * 0.72 * 10) / 10;
+        maxSizeDisplay.textContent = diameterMm.toFixed(1);
+
+        if (diameterMm < 5) massStageLabel.textContent = 'ほこり粒';
+        else if (diameterMm < 10) massStageLabel.textContent = '米粒サイズ';
+        else if (diameterMm < 16) massStageLabel.textContent = '小豆サイズ';
+        else if (diameterMm < 24) massStageLabel.textContent = 'ビー玉級';
+        else massStageLabel.textContent = 'スーパーボール級';
+
+        const cohPct = Math.round(largest.cohesion * 100);
+        cohesionPctEl.textContent = `${cohPct}%`;
+        cohesionBar.style.width = `${cohPct}%`;
+
+        if (cohPct < 30) {
+          cohesionBar.style.background = 'linear-gradient(90deg, #fc8181, #ed8936)';
+          cohesionHint.textContent = 'もろい！ゆっくり練ろう';
+        } else if (cohPct < 70) {
+          cohesionBar.style.background = 'linear-gradient(90deg, #ecc94b, #48bb78)';
+          cohesionHint.textContent = 'まとまってきた！';
+        } else {
+          cohesionBar.style.background = 'linear-gradient(90deg, #38b2ac, #3182ce)';
+          cohesionHint.textContent = 'ツヤツヤ！頑丈なねり消し';
+        }
+      }
+
+      function evaluateRank() {
+        const largest = getLargestCrumb();
+        const diameterMm = largest ? Math.round(largest.radius * 0.72 * 10) / 10 : 0;
+        const cohPct = largest ? Math.round(largest.cohesion * 100) : 0;
+        const graphPct = largest ? Math.round(largest.graphite * 100) : 0;
+
+        let rankTitle = 'ただの紙くずとゴミ';
+        let comment = 'まだバラバラの粒のまま！指先モードで中央に集めてゆっくり押し固めてみよう。';
+
+        if (diameterMm >= 23 && cohPct >= 75 && graphPct >= 65) {
+          rankTitle = '伝説のブラックダイヤ';
+          comment = '黒鉛が完璧に練り込まれ、宝石のように黒光りする究極のねり消し！クラス全員が羨む伝説の逸品。';
+        } else if (diameterMm >= 18 && cohPct >= 60) {
+          rankTitle = 'クラスの人気者レベル';
+          comment = 'ずっしりとした重みと弾力！休み時間に机の上で転がしてもビクともしない完成度！';
+        } else if (diameterMm >= 12 && cohPct >= 40) {
+          rankTitle = '一人前の消しカス団子';
+          comment = 'しっかり団子の形にまとまっている！もう少し黒鉛を練り込むとツヤが出てさらにランクアップ！';
+        } else if (diameterMm >= 6.5) {
+          rankTitle = '小さな米粒ねり消し';
+          comment = 'かわいいサイズの第一歩。「もっと消す」でカスを追加して合体させてみよう！';
+        }
+
+        let darknessText = '白っぽめ';
+        if (graphPct >= 75) darknessText = '漆黒ツヤ';
+        else if (graphPct >= 50) darknessText = '濃グレー';
+        else if (graphPct >= 30) darknessText = '標準グレー';
+
+        document.getElementById('resultRankName').textContent = rankTitle;
+        document.getElementById('resDiameter').textContent = `${diameterMm.toFixed(1)}mm`;
+        document.getElementById('resCohesion').textContent = `${cohPct}%`;
+        document.getElementById('resDarkness').textContent = darknessText;
+        document.getElementById('resultComment').textContent = comment;
+
+        resultOverlay.classList.remove('hidden');
+      }
+
+      // ==========================================
+      // 8. メインループ＆入力イベント
+      // ==========================================
+      let frameCounter = 0;
+      function loop() {
+        updatePhysics();
+        draw();
+
+        frameCounter++;
+        if (frameCounter % 6 === 0) {
+          updateStatsUI();
+        }
+        requestAnimationFrame(loop);
+      }
+
+      function getCanvasPos(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+          x: clientX - rect.left,
+          y: clientY - rect.top
+        };
+      }
+
+      notebookFrame.addEventListener('pointerdown', (e) => {
+        if (!startOverlay.classList.contains('hidden') || !resultOverlay.classList.contains('hidden')) {
+          return;
+        }
+        audio.init();
+        const pos = getCanvasPos(e.clientX, e.clientY);
+        pointer.down = true;
+        pointer.x = pos.x;
+        pointer.y = pos.y;
+        pointer.prevX = pos.x;
+        pointer.prevY = pos.y;
+        pointer.vx = 0;
+        pointer.vy = 0;
+        pointer.speed = 0;
+        notebookFrame.setPointerCapture(e.pointerId);
+      });
+
+      notebookFrame.addEventListener('pointermove', (e) => {
+        const pos = getCanvasPos(e.clientX, e.clientY);
+        if (pointer.down) {
+          pointer.vx = pos.x - pointer.prevX;
+          pointer.vy = pos.y - pointer.prevY;
+          pointer.speed = Math.hypot(pointer.vx, pointer.vy);
+        }
+        pointer.prevX = pos.x;
+        pointer.prevY = pos.y;
+        pointer.x = pos.x;
+        pointer.y = pos.y;
+      });
+
+      function releasePointer() {
+        pointer.down = false;
+        pointer.vx = 0;
+        pointer.vy = 0;
+        pointer.speed = 0;
+      }
+
+      notebookFrame.addEventListener('pointerup', releasePointer);
+      notebookFrame.addEventListener('pointercancel', releasePointer);
+
+      // 道具切替
+      toolFingerBtn.addEventListener('click', () => {
+        activeTool = 'FINGER';
+        toolFingerBtn.classList.add('active');
+        toolRulerBtn.classList.remove('active');
+        showToast('👆 指先モード：集めたカスをギュッと押し固めよう！', 'normal', 1600);
+      });
+
+      toolRulerBtn.addEventListener('click', () => {
+        activeTool = 'RULER';
+        toolRulerBtn.classList.add('active');
+        toolFingerBtn.classList.remove('active');
+        showToast('📏 定規モード：散らばったカスを一気に掃き集めよう！', 'normal', 1600);
+      });
+
+      // もっと消す（補充）
+      moreEraseBtn.addEventListener('click', () => {
+        audio.init();
+        triggerMoreErase();
+      });
+
+      // 完成・鑑定
+      finishBtn.addEventListener('click', () => {
+        audio.init();
+        evaluateRank();
+      });
+
+      // モード切替（無限モード / 補充3回制限モード）
+      modeToggleBtn.addEventListener('click', () => {
+        if (gameMode === 'INFINITE') {
+          gameMode = 'LIMITED';
+          eraseCharges = 3;
+          modeToggleBtn.textContent = '🏆 3回勝負';
+          showToast('補充3回制限の職人チャレンジに切替！', 'normal', 1800);
+        } else {
+          gameMode = 'INFINITE';
+          eraseCharges = Infinity;
+          modeToggleBtn.textContent = '♾️ 無限モード';
+          showToast('好きなだけ練れる無限こねこねモードに切替！', 'normal', 1800);
+        }
+        updateEraseButtonUI();
+        scatterInitialCrumbs(95);
+      });
+
+      // サウンド切替
+      document.getElementById('soundBtn').addEventListener('click', (e) => {
+        const muted = audio.toggle();
+        e.currentTarget.textContent = muted ? '🔇' : '🔊';
+      });
+
+      // モーダルボタン
+      document.getElementById('startGameBtn').addEventListener('click', () => {
+        audio.init();
+        startOverlay.classList.add('hidden');
+        scatterInitialCrumbs(95);
+      });
+
+      document.getElementById('continueBtn').addEventListener('click', () => {
+        resultOverlay.classList.add('hidden');
+      });
+
+      document.getElementById('restartBtn').addEventListener('click', () => {
+        resultOverlay.classList.add('hidden');
+        if (gameMode === 'LIMITED') eraseCharges = 3;
+        updateEraseButtonUI();
+        generatePencilScribbles();
+        scatterInitialCrumbs(95);
+        showToast('新しいノートのページを開いた！', 'good', 1600);
+      });
+
+      // 初期化＆ループ開始
+      window.onload = () => {
+        resizeCanvas();
+        updateEraseButtonUI();
+        scatterInitialCrumbs(95);
+        loop();
+      };
+    })();
+  </script>
+</body>
+</html>
