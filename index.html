@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>屋台＆職人ミニゲーム横丁</title>
+  <style>
+    :root {
+      --bg-dark: #160f0b;
+      --bg-wood: #231710;
+      --card-bg: #2c1d14;
+      --card-border: #563c29;
+      --accent-gold: #f6b92d;
+      --accent-amber: #e28719;
+      --accent-red: #dc3f2f;
+      --accent-cream: #fff5e4;
+      --text-main: #fff7ea;
+      --text-sub: #cbb59b;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(226, 135, 25, 0.18) 0%, transparent 55%),
+        radial-gradient(circle at 18% 20%, rgba(220, 63, 47, 0.14) 0%, transparent 45%),
+        linear-gradient(180deg, #1d130d 0%, var(--bg-dark) 100%);
+      color: var(--text-main);
+      font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
+    }
+
+    .page {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 28px 18px 44px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* 屋台のれん風ヘッダー */
+    .hero {
+      position: relative;
+      background: linear-gradient(180deg, #342116 0%, var(--bg-wood) 100%);
+      border: 2px solid var(--card-border);
+      border-radius: 20px;
+      padding: 26px 22px 28px;
+      text-align: center;
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55);
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 8px;
+      background: repeating-linear-gradient(
+        90deg,
+        var(--accent-red) 0px,
+        var(--accent-red) 28px,
+        var(--accent-cream) 28px,
+        var(--accent-cream) 56px
+      );
+    }
+
+    .lantern-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 6px;
+      margin-bottom: 10px;
+    }
+
+    .lantern {
+      background: var(--accent-red);
+      color: var(--accent-cream);
+      border: 1.5px solid #ff947a;
+      border-radius: 999px;
+      padding: 4px 14px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      box-shadow: 0 4px 14px rgba(220, 63, 47, 0.35);
+    }
+
+    .hero h1 {
+      margin: 0 0 10px;
+      font-size: clamp(26px, 5vw, 42px);
+      line-height: 1.2;
+      color: var(--accent-gold);
+      text-shadow: 0 3px 0 #5b2607, 0 8px 20px rgba(0, 0, 0, 0.5);
+      letter-spacing: 0.04em;
+    }
+
+    .hero p {
+      margin: 0 auto;
+      max-width: 580px;
+      font-size: clamp(13.5px, 2.2vw, 15px);
+      line-height: 1.7;
+      color: var(--text-sub);
+    }
+
+    /* ゲームカードグリッド */
+    .games-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .game-card {
+      background: linear-gradient(180deg, #332218 0%, var(--card-bg) 100%);
+      border: 2px solid var(--card-border);
+      border-radius: 18px;
+      padding: 18px 16px 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 14px;
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+      transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+    }
+
+    .game-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--accent-gold);
+      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(246, 185, 45, 0.25);
+    }
+
+    /* アニメーション付きプレビュー枠 */
+    .preview-box {
+      position: relative;
+      height: 128px;
+      border-radius: 14px;
+      background: radial-gradient(circle at 50% 35%, #2a1b12 0%, #140c08 100%);
+      border: 1px solid rgba(255, 225, 175, 0.14);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .tag-pill {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.55);
+      border: 1px solid rgba(246, 185, 45, 0.45);
+      color: var(--accent-gold);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 9px;
+      border-radius: 999px;
+    }
+
+    /* おでんタワーアニメ */
+    .oden-stack {
+      display: flex;
+      flex-direction: column-reverse;
+      align-items: center;
+      gap: 4px;
+      animation: odenWobble 2.4s ease-in-out infinite;
+    }
+
+    .oden-piece {
+      border-radius: 999px;
+      border: 1.5px solid rgba(0, 0, 0, 0.35);
+      box-shadow: inset 0 2px 3px rgba(255, 255, 255, 0.25);
+    }
+
+    .oden-daikon {
+      width: 54px;
+      height: 18px;
+      background: #f5e6c4;
+    }
+
+    .oden-konnyaku {
+      width: 44px;
+      height: 14px;
+      border-radius: 5px;
+      background: #5b636a;
+    }
+
+    .oden-tamago {
+      width: 38px;
+      height: 22px;
+      border-radius: 50%;
+      background: #fff4d6;
+    }
+
+    .oden-skewer {
+      width: 4px;
+      height: 76px;
+      background: #d8a35d;
+      border-radius: 2px;
+      position: absolute;
+      bottom: 18px;
+      z-index: 2;
+    }
+
+    @keyframes odenWobble {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      35% { transform: translateY(-4px) rotate(-1.6deg); }
+      70% { transform: translateY(2px) rotate(1.6deg); }
+    }
+
+    /* 消しカス職人アニメ */
+    .eraser-scene {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .eraser-block {
+      width: 56px;
+      height: 30px;
+      border-radius: 6px;
+      background: linear-gradient(180deg, #4f8fe8 0%, #2d63b8 100%);
+      border: 2px solid #9ec5ff;
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.45);
+      animation: rubSlide 1.3s ease-in-out infinite;
+    }
+
+    .crumb {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-radius: 2px;
+      background: #f2d59b;
+      opacity: 0;
+    }
+
+    .crumb:nth-child(2) { left: 32%; top: 64%; animation: crumbPop 1.3s ease-out infinite 0.1s; }
+    .crumb:nth-child(3) { left: 48%; top: 58%; animation: crumbPop 1.3s ease-out infinite 0.35s; }
+    .crumb:nth-child(4) { left: 64%; top: 66%; animation: crumbPop 1.3s ease-out infinite 0.6s; }
+
+    @keyframes rubSlide {
+      0%, 100% { transform: translateX(-16px) rotate(-4deg); }
+      50% { transform: translateX(16px) rotate(4deg); }
+    }
+
+    @keyframes crumbPop {
+      0% { opacity: 0; transform: translate(0, 0) scale(0.6); }
+      40% { opacity: 1; transform: translate(6px, -10px) scale(1.1); }
+      100% { opacity: 0; transform: translate(14px, 6px) scale(0.7); }
+    }
+
+    /* 湯切り職人アニメ */
+    .yukiri-scene {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .basket-mini {
+      width: 78px;
+      height: 24px;
+      border-radius: 0 0 36px 36px;
+      border: 3px solid #e0a046;
+      background: rgba(247, 201, 72, 0.22);
+      position: relative;
+      animation: shakeBasket 0.85s ease-in-out infinite;
+    }
+
+    .basket-mini::before {
+      content: "";
+      position: absolute;
+      top: -6px;
+      left: 6px;
+      right: 6px;
+      height: 10px;
+      border-radius: 50%;
+      background: #f7c948;
+      box-shadow: 0 -2px 0 #c99218;
+    }
+
+    @keyframes shakeBasket {
+      0%, 100% { transform: translateY(-7px) rotate(-3deg); }
+      50% { transform: translateY(7px) rotate(3deg); }
+    }
+
+    .card-body h2 {
+      margin: 0 0 6px;
+      font-size: 20px;
+      color: var(--accent-cream);
+    }
+
+    .catchcopy {
+      margin: 0 0 8px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent-gold);
+    }
+
+    .desc {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text-sub);
+    }
+
+    .play-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 900;
+      color: #241204;
+      background: linear-gradient(180deg, #ffcb3d 0%, var(--accent-amber) 100%);
+      box-shadow: 0 4px 0 #844903, 0 8px 16px rgba(0, 0, 0, 0.35);
+      transition: transform 0.08s ease, filter 0.14s ease;
+    }
+
+    .play-btn:hover {
+      filter: brightness(1.06);
+    }
+
+    .play-btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #844903;
+    }
+
+    .footer {
+      text-align: center;
+      font-size: 12.5px;
+      color: var(--text-sub);
+      padding-top: 4px;
+    }
+
+    @media (max-width: 820px) {
+      .games-grid {
+        grid-template-columns: 1fr;
+        max-width: 460px;
+        margin: 0 auto;
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <div class="lantern-row">
+        <span class="lantern">屋台＆職人ミニゲーム集</span>
+      </div>
+      <h1>屋台＆職人ミニゲーム横丁</h1>
+      <p>
+        ちょっとした空き時間にサクッと遊べるブラウザミニゲームコーナーです。<br />
+        気になる屋台・職人の暖簾をくぐって挑戦しよう！
+      </p>
+    </header>
+
+    <section class="games-grid" aria-label="遊べるミニゲーム一覧">
+      <!-- 1. おでんタワー -->
+      <article class="game-card">
+        <div>
+          <div class="preview-box">
+            <span class="tag-pill">バランス積み</span>
+            <div class="oden-skewer" aria-hidden="true"></div>
+            <div class="oden-stack" aria-hidden="true">
+              <div class="oden-piece oden-daikon"></div>
+              <div class="oden-piece oden-konnyaku"></div>
+              <div class="oden-piece oden-tamago"></div>
+            </div>
+          </div>
+          <div class="card-body" style="margin-top: 14px;">
+            <h2>おでんタワー</h2>
+            <p class="catchcopy">グラグラ具材を積み上げて限界タワーを目指せ！</p>
+            <p class="desc">
+              大根や玉子などのアツアツ具材をタイミングよく積んで、崩さずにどこまで高くできるか挑むバランスゲーム。
+            </p>
+          </div>
+        </div>
+        <a
+          class="play-btn"
+          href="https://thailandtaitai.github.io/%E3%81%8A%E3%81%A7%E3%82%93%E3%82%BF%E3%83%AF%E3%83%BC"
+          rel="noopener"
+        >
+          遊ぶ →
+        </a>
+      </article>
+
+      <!-- 2. 消しカス職人 -->
+      <article class="game-card">
+        <div>
+          <div class="preview-box">
+            <span class="tag-pill">職人アクション</span>
+            <div class="eraser-scene" aria-hidden="true">
+              <div class="eraser-block"></div>
+              <span class="crumb"></span>
+              <span class="crumb"></span>
+              <span class="crumb"></span>
+            </div>
+          </div>
+          <div class="card-body" style="margin-top: 14px;">
+            <h2>消しカス職人</h2>
+            <p class="catchcopy">机の上の消しカスをこねて練り上げて極めろ！</p>
+            <p class="desc">
+              懐かしい消しカス集めを職人ワザに昇華。手際よくまとめる爽快感とハイスコア狙いがクセになるミニゲーム。
+            </p>
+          </div>
+        </div>
+        <a
+          class="play-btn"
+          href="https://thailandtaitai.github.io/%E6%B6%88%E3%81%97%E3%82%AB%E3%82%B9%E8%81%B7%E4%BA%BA"
+          rel="noopener"
+        >
+          遊ぶ →
+        </a>
+      </article>
+
+      <!-- 3. 湯切り職人 -->
+      <article class="game-card">
+        <div>
+          <div class="preview-box">
+            <span class="tag-pill">15秒タイムアタック</span>
+            <div class="yukiri-scene" aria-hidden="true">
+              <div class="basket-mini"></div>
+            </div>
+          </div>
+          <div class="card-body" style="margin-top: 14px;">
+            <h2>湯切り職人</h2>
+            <p class="catchcopy">15秒でキレのある湯切り！ジャスト盛り付け勝負</p>
+            <p class="desc">
+              平ザルを上下に振って麺の湯を切り、こぼさないように丼へ投入。リズムとタイミングが試される屋台タイムアタック。
+            </p>
+          </div>
+        </div>
+        <a
+          class="play-btn"
+          href="https://thailandtaitai.github.io/%E6%B9%AF%E5%88%87%E3%82%8A%E8%81%B7%E4%BA%BA"
+          rel="noopener"
+        >
+          遊ぶ →
+        </a>
+      </article>
+    </section>
+
+    <footer class="footer">
+      屋台＆職人ミニゲーム横丁 — ブラウザですぐ遊べます
+    </footer>
+  </main>
+</body>
+</html>
