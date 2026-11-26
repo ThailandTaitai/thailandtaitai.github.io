@@ -1,0 +1,1727 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>おでんタワー積み上げゲーム</title>
+  <!-- Google Fonts: 丸みのある親しみやすい和風ゴシック -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap" rel="stylesheet">
+  <!-- 剛体物理エンジン Matter.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+  <style>
+    :root {
+      --bg-night: #1d1512;
+      --bg-wood-dark: #3b2314;
+      --bg-wood-light: #5c3821;
+      --accent-lantern: #ff6b35;
+      --accent-gold: #f7b538;
+      --text-cream: #fff8eb;
+      --panel-bg: rgba(43, 25, 14, 0.88);
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'M PLUS Rounded 1c', sans-serif;
+      background: radial-gradient(circle at 50% 20%, #3d2417 0%, #1a110d 75%, #110b08 100%);
+      color: var(--text-cream);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      overflow: hidden;
+    }
+
+    /* 背景の提灯の光ボケ演出 */
+    .lantern-glow {
+      position: fixed;
+      width: 240px;
+      height: 240px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 123, 57, 0.18) 0%, rgba(255, 123, 57, 0) 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .glow-left { top: -40px; left: -40px; }
+    .glow-right { top: 20px; right: -50px; }
+
+    /* メインコンテナ */
+    .game-wrapper {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 440px;
+      height: 100dvh;
+      max-height: 780px;
+      display: flex;
+      flex-direction: column;
+      padding: 10px 14px 14px;
+      gap: 8px;
+    }
+
+    /* ヘッダー（のれん風タイトル＆スコア） */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(180deg, #8f2d1e 0%, #6e1f14 100%);
+      border: 2px solid #d98a4e;
+      border-radius: 14px;
+      padding: 8px 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+    }
+
+    .title-area {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .lantern-icon {
+      width: 30px;
+      height: 36px;
+      flex-shrink: 0;
+    }
+
+    h1 {
+      font-size: 1.05rem;
+      font-weight: 800;
+      margin: 0;
+      letter-spacing: 0.04em;
+      text-shadow: 1px 2px 0 rgba(0, 0, 0, 0.4);
+      line-height: 1.2;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sound-btn {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1.5px solid rgba(255, 248, 235, 0.4);
+      color: var(--text-cream);
+      border-radius: 10px;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1.1rem;
+      transition: transform 0.1s, background 0.2s;
+    }
+    .sound-btn:active {
+      transform: scale(0.92);
+    }
+
+    /* ステータスバー（スコア・ハイスコア・次の具材） */
+    .status-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.25fr;
+      gap: 8px;
+    }
+
+    .stat-card {
+      background: var(--panel-bg);
+      border: 1.5px solid #754c29;
+      border-radius: 12px;
+      padding: 5px 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    .stat-label {
+      font-size: 0.66rem;
+      color: #d6bfa9;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .stat-value {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--accent-gold);
+      line-height: 1.15;
+    }
+
+    .stat-sub {
+      font-size: 0.72rem;
+      color: #ebd9c8;
+      font-weight: 700;
+    }
+
+    .next-card {
+      flex-direction: row;
+      justify-content: space-between;
+      padding: 4px 10px;
+    }
+
+    .next-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .next-name {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-cream);
+    }
+
+    .next-trait {
+      font-size: 0.62rem;
+      color: #ffb870;
+      font-weight: 700;
+    }
+
+    #nextCanvas {
+      width: 44px;
+      height: 38px;
+      background: rgba(255, 248, 235, 0.08);
+      border-radius: 8px;
+    }
+
+    /* メインゲームキャンバス領域 */
+    .canvas-container {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 3px solid #7a4b2a;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), inset 0 0 30px rgba(0, 0, 0, 0.4);
+      background: linear-gradient(180deg, #271b16 0%, #3a261c 65%, #4a3022 100%);
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    canvas#gameCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* 連打防止クールダウン＆静止待機インジケーター */
+    .cooldown-hud {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(24, 15, 11, 0.85);
+      border: 1.5px solid rgba(247, 181, 56, 0.45);
+      border-radius: 999px;
+      padding: 4px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 5;
+    }
+
+    .cooldown-hud.ready {
+      border-color: rgba(114, 230, 145, 0.65);
+    }
+
+    .cooldown-text {
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #ffd166;
+      white-space: nowrap;
+    }
+
+    .cooldown-hud.ready .cooldown-text {
+      color: #8ce99a;
+    }
+
+    .cooldown-bar-bg {
+      width: 64px;
+      height: 7px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .cooldown-bar-fill {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #ff922b, #ffd43b);
+      border-radius: 999px;
+      transition: width 0.05s linear;
+    }
+
+    .cooldown-hud.ready .cooldown-bar-fill {
+      background: linear-gradient(90deg, #40c057, #8ce99a);
+    }
+
+    /* 操作ガイドバッジ */
+    .hint-badge {
+      position: absolute;
+      bottom: 84px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(29, 21, 18, 0.78);
+      border: 1px solid rgba(247, 181, 56, 0.5);
+      color: #ffe9c2;
+      padding: 5px 14px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      pointer-events: none;
+      white-space: nowrap;
+      animation: pulseHint 2s infinite ease-in-out;
+    }
+
+    @keyframes pulseHint {
+      0%, 100% { opacity: 0.85; transform: translateX(-50%) scale(1); }
+      50% { opacity: 0.45; transform: translateX(-50%) scale(0.97); }
+    }
+
+    /* オーバーレイモーダル（スタート＆ゲームオーバー） */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(20, 13, 10, 0.84);
+      backdrop-filter: blur(4px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      text-align: center;
+      z-index: 10;
+      transition: opacity 0.25s ease;
+    }
+
+    .overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .modal-card {
+      background: linear-gradient(180deg, #472b1a 0%, #331e12 100%);
+      border: 2px solid #d98a4e;
+      border-radius: 20px;
+      padding: 22px 20px;
+      width: 100%;
+      max-width: 330px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.65);
+    }
+
+    .modal-title {
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: var(--accent-gold);
+      margin: 0 0 8px;
+    }
+
+    .modal-desc {
+      font-size: 0.86rem;
+      color: #ebd9c8;
+      line-height: 1.55;
+      margin: 0 0 16px;
+    }
+
+    .rank-box {
+      background: rgba(0, 0, 0, 0.32);
+      border: 1.5px dashed #f7b538;
+      border-radius: 14px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+
+    .rank-label {
+      font-size: 0.72rem;
+      color: #d6bfa9;
+      margin-bottom: 2px;
+    }
+
+    .rank-title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: #ff9f43;
+      margin-bottom: 4px;
+    }
+
+    .result-count {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--text-cream);
+    }
+
+    .result-count span {
+      font-size: 0.95rem;
+      color: #d6bfa9;
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 13px 20px;
+      font-family: inherit;
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #2b1408;
+      background: linear-gradient(180deg, #ffd166 0%, #f79d2b 100%);
+      border: none;
+      border-radius: 14px;
+      box-shadow: 0 4px 0 #b86214, 0 6px 14px rgba(0, 0, 0, 0.4);
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+
+    .btn-primary:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #b86214, 0 3px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    /* スマホ用の下部ドロップボタン（キャンバス直接タップと併用可） */
+    .drop-footer {
+      display: flex;
+      justify-content: center;
+    }
+
+    .btn-drop {
+      width: 100%;
+      padding: 12px;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--text-cream);
+      background: linear-gradient(180deg, #c94a2c 0%, #992d16 100%);
+      border: 2px solid #f29f67;
+      border-radius: 14px;
+      box-shadow: 0 4px 0 #5e180a;
+      cursor: pointer;
+      transition: transform 0.08s, box-shadow 0.08s, opacity 0.15s, filter 0.15s;
+    }
+
+    .btn-drop:active:not(:disabled) {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #5e180a;
+    }
+
+    .btn-drop:disabled {
+      opacity: 0.52;
+      filter: grayscale(0.45);
+      cursor: not-allowed;
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #5e180a;
+    }
+  </style>
+</head>
+<body>
+  <!-- 背景の提灯の柔らかな光 -->
+  <div class="lantern-glow glow-left"></div>
+  <div class="lantern-glow glow-right"></div>
+
+  <div class="game-wrapper">
+    <!-- ヘッダー -->
+    <header>
+      <div class="title-area">
+        <!-- 提灯のインラインSVG -->
+        <svg class="lantern-icon" viewBox="0 0 40 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="14" y="2" width="12" height="4" rx="2" fill="#2b1810"/>
+          <ellipse cx="20" cy="24" rx="14" ry="18" fill="#ff5722"/>
+          <ellipse cx="20" cy="24" rx="10" ry="17" fill="#ff7043" opacity="0.6"/>
+          <path d="M7 18C14 20 26 20 33 18" stroke="#8f2d1e" stroke-width="1.5"/>
+          <path d="M6 24C14 26 26 26 34 24" stroke="#8f2d1e" stroke-width="1.5"/>
+          <path d="M7 30C14 32 26 32 33 30" stroke="#8f2d1e" stroke-width="1.5"/>
+          <rect x="14" y="41" width="12" height="4" rx="2" fill="#2b1810"/>
+          <text x="20" y="27" text-anchor="middle" fill="#fff8eb" font-size="9" font-weight="bold">おでん</text>
+        </svg>
+        <h1>おでんタワー</h1>
+      </div>
+      <div class="header-controls">
+        <button id="soundToggle" class="sound-btn" title="効果音 ON/OFF" aria-label="効果音切替">🔊</button>
+      </div>
+    </header>
+
+    <!-- スコア・高さ・次の具材 -->
+    <div class="status-bar">
+      <div class="stat-card">
+        <span class="stat-label">積んだ数 / 記録</span>
+        <div>
+          <span id="scoreDisplay" class="stat-value">0</span>
+          <span class="stat-sub">/ <span id="highScoreDisplay">0</span></span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">タワー高さ</span>
+        <div>
+          <span id="heightDisplay" class="stat-value">0.0</span>
+          <span class="stat-sub">cm</span>
+        </div>
+      </div>
+      <div class="stat-card next-card">
+        <div class="next-info">
+          <span class="stat-label">つぎの具</span>
+          <span id="nextName" class="next-name">大根</span>
+          <span id="nextTrait" class="next-trait">安定感◎</span>
+        </div>
+        <canvas id="nextCanvas" width="88" height="76"></canvas>
+      </div>
+    </div>
+
+    <!-- メインゲームキャンバス -->
+    <div class="canvas-container" id="canvasContainer">
+      <canvas id="gameCanvas"></canvas>
+
+      <!-- 連打防止クールダウン＆安定待機ゲージ -->
+      <div id="cooldownHud" class="cooldown-hud ready">
+        <span id="cooldownText" class="cooldown-text">投下OK!</span>
+        <div class="cooldown-bar-bg">
+          <div id="cooldownBarFill" class="cooldown-bar-fill"></div>
+        </div>
+      </div>
+
+      <div id="hintBadge" class="hint-badge">タップ または スペースキーで落とす</div>
+
+      <!-- スタート画面オーバーレイ -->
+      <div id="startOverlay" class="overlay">
+        <div class="modal-card">
+          <h2 class="modal-title">🍢 物理おでんタワー</h2>
+          <p class="modal-desc">
+            リアル物理演算でおでんを積み上げよう！<br>
+            <b>大根・厚揚げ</b>は安定、<b>たまご・ちくわ</b>はコロコロ転がり、<b>こんにゃく</b>は超ツルツル滑るので要注意！
+          </p>
+          <button id="startBtn" class="btn-primary">屋台を開店する（スタート）</button>
+        </div>
+      </div>
+
+      <!-- ゲームオーバー画面オーバーレイ -->
+      <div id="gameOverOverlay" class="overlay hidden">
+        <div class="modal-card">
+          <h2 class="modal-title">おでん崩落！</h2>
+          <div class="rank-box">
+            <div class="rank-label">おでん屋台ランク</div>
+            <div id="rankTitle" class="rank-title">見習い屋台</div>
+            <div class="result-count">
+              <span id="finalScore" style="font-size: 1.9rem; color: #f7b538;">0</span> <span>個</span>
+              <span style="margin: 0 4px;">/</span>
+              <span id="finalHeight" style="font-size: 1.5rem; color: #8ce99a;">0.0</span> <span>cm</span>
+            </div>
+          </div>
+          <p id="rankComment" class="modal-desc" style="margin-bottom: 14px;">まずは大根の安定感から練習しよう！</p>
+          <button id="retryBtn" class="btn-primary">もう一杯つくる（リトライ）</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 下部ドロップボタン -->
+    <div class="drop-footer">
+      <button id="dropBtn" class="btn-drop">具材を落とす（タップ / SPACE）</button>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * リアル物理おでんタワー積み上げゲーム (Matter.js 搭載版)
+     * 剛体力学・摩擦・回転モーメント・こんにゃくの超低摩擦滑りを実装
+     */
+    (() => {
+      const {
+        Engine,
+        World,
+        Bodies,
+        Body,
+        Events,
+        Composite
+      } = Matter;
+
+      // ==========================================
+      // 1. サウンドシステム (Web Audio API)
+      // ==========================================
+      class SoundManager {
+        constructor() {
+          this.ctx = null;
+          this.muted = false;
+          this.lastSlideTime = 0;
+          this.lastHitTime = 0;
+        }
+
+        init() {
+          if (!this.ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) {
+              this.ctx = new AudioCtx();
+            }
+          }
+          if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume();
+          }
+        }
+
+        toggleMute() {
+          this.muted = !this.muted;
+          return this.muted;
+        }
+
+        // 箸から離す音
+        playDrop() {
+          if (this.muted) return;
+          this.init();
+          if (!this.ctx) return;
+
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(460, now);
+          osc.frequency.exponentialRampToValueAtTime(190, now + 0.12);
+
+          gain.gain.setValueAtTime(0.16, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(now);
+          osc.stop(now + 0.14);
+        }
+
+        // 具材同士・お皿との衝突音（衝撃の強さで音量変化）
+        playHit(impactSpeed = 3, isKonnyaku = false) {
+          if (this.muted) return;
+          const nowMs = performance.now();
+          if (nowMs - this.lastHitTime < 55) return; // 連続鳴りすぎ防止
+          this.lastHitTime = nowMs;
+
+          this.init();
+          if (!this.ctx) return;
+
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+
+          const vol = Math.min(0.28, Math.max(0.03, impactSpeed * 0.032));
+          const baseFreq = isKonnyaku ? 230 : 145;
+
+          osc.type = isKonnyaku ? 'sine' : 'triangle';
+          osc.frequency.setValueAtTime(baseFreq, now);
+          osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.35, now + 0.05);
+          osc.frequency.exponentialRampToValueAtTime(85, now + 0.14);
+
+          gain.gain.setValueAtTime(vol, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(now);
+          osc.stop(now + 0.16);
+        }
+
+        // こんにゃくが「ツルッ」と滑る効果音
+        playKonnyakuSlide() {
+          if (this.muted) return;
+          const nowMs = performance.now();
+          if (nowMs - this.lastSlideTime < 420) return;
+          this.lastSlideTime = nowMs;
+
+          this.init();
+          if (!this.ctx) return;
+
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(340, now);
+          osc.frequency.exponentialRampToValueAtTime(640, now + 0.16);
+          osc.frequency.exponentialRampToValueAtTime(290, now + 0.28);
+
+          gain.gain.setValueAtTime(0.14, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.29);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(now);
+          osc.stop(now + 0.3);
+        }
+
+        // 画面外落下（ゲームオーバー）音
+        playGameOver() {
+          if (this.muted) return;
+          this.init();
+          if (!this.ctx) return;
+
+          const now = this.ctx.currentTime;
+          const freqs = [200, 150, 95];
+          freqs.forEach((f, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sawtooth';
+            const start = now + idx * 0.09;
+            osc.frequency.setValueAtTime(f, start);
+            osc.frequency.exponentialRampToValueAtTime(48, start + 0.26);
+
+            gain.gain.setValueAtTime(0.16, start);
+            gain.gain.exponentialRampToValueAtTime(0.001, start + 0.27);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(start);
+            osc.stop(start + 0.28);
+          });
+        }
+      }
+
+      const sound = new SoundManager();
+
+      // ==========================================
+      // 2. おでん具材の物理パラメータ＆イラスト描画定義
+      // ==========================================
+      const ODEN_TYPES = [
+        {
+          id: 'daikon',
+          name: '大根',
+          trait: '重い・高摩擦◎',
+          width: 94,
+          height: 36,
+          // Matter.js 剛体生成関数
+          createBody(x, y) {
+            return Bodies.rectangle(x, y, 94, 36, {
+              chamfer: { radius: 8 },
+              density: 0.0032,        // ずっしり重い
+              friction: 0.78,         // 高い摩擦係数で滑りにくい
+              frictionStatic: 0.95,
+              frictionAir: 0.01,
+              restitution: 0.04       // ほぼ弾まない
+            });
+          },
+          draw(ctx, w, h) {
+            const r = 9;
+            ctx.save();
+            const grad = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+            grad.addColorStop(0, '#fff8e8');
+            grad.addColorStop(0.5, '#f2dfb8');
+            grad.addColorStop(1, '#dcc089');
+            ctx.fillStyle = grad;
+            roundRect(ctx, -w / 2, -h / 2, w, h, r);
+            ctx.fill();
+
+            ctx.strokeStyle = '#b59052';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // 隠し包丁の十字線
+            ctx.strokeStyle = 'rgba(166, 124, 65, 0.6)';
+            ctx.lineWidth = 1.8;
+            ctx.beginPath();
+            ctx.moveTo(-14, 0);
+            ctx.lineTo(14, 0);
+            ctx.moveTo(0, -9);
+            ctx.lineTo(0, 9);
+            ctx.stroke();
+
+            // 面取りハイライト
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+            ctx.lineWidth = 1.4;
+            roundRect(ctx, -w / 2 + 3, -h / 2 + 3, w - 6, h - 6, r - 2);
+            ctx.stroke();
+            ctx.restore();
+          }
+        },
+        {
+          id: 'konnyaku',
+          name: 'こんにゃく',
+          trait: '超ツルツル注意！',
+          width: 88,
+          height: 44,
+          // 三角柱ポリゴン（台形に近い三角）＋ 極低摩擦
+          createBody(x, y) {
+            const w = 88;
+            const h = 44;
+            const topHalf = 14;
+            const vertices = [
+              { x: -topHalf, y: -h / 2 },
+              { x: topHalf, y: -h / 2 },
+              { x: w / 2, y: h / 2 },
+              { x: -w / 2, y: h / 2 }
+            ];
+            return Bodies.fromVertices(x, y, [vertices], {
+              density: 0.0020,
+              friction: 0.015,        // 極端に低い動摩擦（ツルッと滑る！）
+              frictionStatic: 0.025,  // 静止摩擦も極低（少しでも傾くと滑り出す）
+              frictionAir: 0.005,
+              restitution: 0.14       // ぷるんと少し弾む
+            }, true);
+          },
+          draw(ctx, w, h) {
+            ctx.save();
+            const topW = 28;
+            const r = 5;
+            ctx.beginPath();
+            ctx.moveTo(-topW / 2, -h / 2);
+            ctx.lineTo(topW / 2, -h / 2);
+            ctx.lineTo(w / 2 - r, h / 2 - r);
+            ctx.quadraticCurveTo(w / 2, h / 2, w / 2 - r, h / 2);
+            ctx.lineTo(-w / 2 + r, h / 2);
+            ctx.quadraticCurveTo(-w / 2, h / 2, -w / 2 + r, h / 2 - r);
+            ctx.closePath();
+
+            const grad = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+            grad.addColorStop(0, '#969ea8');
+            grad.addColorStop(0.55, '#727982');
+            grad.addColorStop(1, '#545a61');
+            ctx.fillStyle = grad;
+            ctx.fill();
+
+            ctx.strokeStyle = '#383d42';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // ぬめり・光沢ハイライト（滑りやすさの視覚サイン）
+            ctx.strokeStyle = 'rgba(235, 248, 255, 0.72)';
+            ctx.lineWidth = 2.2;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(-10, -h / 2 + 6);
+            ctx.lineTo(-26, h / 2 - 10);
+            ctx.stroke();
+
+            // ひじき・海藻ドット
+            ctx.fillStyle = '#25292c';
+            const dots = [
+              [-16, 10], [-6, 13], [6, 11], [18, 12],
+              [-8, 1], [5, -1], [12, 5], [0, -9], [-22, 15], [24, 14]
+            ];
+            dots.forEach(([dx, dy]) => {
+              ctx.beginPath();
+              ctx.arc(dx, dy, 1.5, 0, Math.PI * 2);
+              ctx.fill();
+            });
+            ctx.restore();
+          }
+        },
+        {
+          id: 'chikuwa',
+          name: 'ちくわ',
+          trait: '転がりやすい',
+          width: 102,
+          height: 30,
+          // 角丸の筒状（転がりやすい）
+          createBody(x, y) {
+            return Bodies.rectangle(x, y, 102, 30, {
+              chamfer: { radius: 13 }, // 端が丸く転がりやすい
+              density: 0.0017,
+              friction: 0.42,
+              frictionStatic: 0.50,
+              frictionAir: 0.01,
+              restitution: 0.12
+            });
+          },
+          draw(ctx, w, h) {
+            ctx.save();
+            const bodyW = w - 12;
+            const grad = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+            grad.addColorStop(0, '#f5d5a3');
+            grad.addColorStop(0.35, '#c97b36');
+            grad.addColorStop(0.7, '#9e531b');
+            grad.addColorStop(1, '#e8be84');
+
+            ctx.fillStyle = grad;
+            roundRect(ctx, -bodyW / 2, -h / 2, bodyW, h, 8);
+            ctx.fill();
+            ctx.strokeStyle = '#6e360e';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // 焼き目
+            ctx.fillStyle = 'rgba(110, 48, 10, 0.35)';
+            ctx.beginPath();
+            ctx.ellipse(-15, -2, 12, 5, 0.1, 0, Math.PI * 2);
+            ctx.ellipse(15, 1, 14, 5, -0.1, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 左右の断面と穴
+            [-1, 1].forEach((dir) => {
+              const ex = dir * (bodyW / 2);
+              ctx.fillStyle = '#fff5e4';
+              ctx.beginPath();
+              ctx.ellipse(ex, 0, 6, h / 2 - 1, 0, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.strokeStyle = '#8c4a19';
+              ctx.lineWidth = 1.5;
+              ctx.stroke();
+
+              ctx.fillStyle = '#4a250c';
+              ctx.beginPath();
+              ctx.ellipse(ex, 0, 2.5, h / 4, 0, 0, Math.PI * 2);
+              ctx.fill();
+            });
+            ctx.restore();
+          }
+        },
+        {
+          id: 'tamago',
+          name: 'たまご',
+          trait: 'コロコロ転がる',
+          width: 60,
+          height: 44,
+          // 16角形の楕円ポリゴン（平らな面がないとリアルに転がる）
+          createBody(x, y) {
+            const rx = 30;
+            const ry = 22;
+            const sides = 16;
+            const verts = [];
+            for (let i = 0; i < sides; i++) {
+              const theta = (i / sides) * Math.PI * 2;
+              verts.push({
+                x: Math.cos(theta) * rx,
+                y: Math.sin(theta) * ry
+              });
+            }
+            return Bodies.fromVertices(x, y, [verts], {
+              density: 0.0022,
+              friction: 0.32,
+              frictionStatic: 0.35,
+              frictionAir: 0.008,
+              restitution: 0.15
+            }, true);
+          },
+          draw(ctx, w, h) {
+            ctx.save();
+            const grad = ctx.createRadialGradient(-8, -8, 4, 0, 0, w * 0.6);
+            grad.addColorStop(0, '#ffffff');
+            grad.addColorStop(0.55, '#f5e6cc');
+            grad.addColorStop(1, '#d1af7b');
+
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, w / 2, h / 2, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = '#a37e46';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // ツヤハイライト
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.78)';
+            ctx.beginPath();
+            ctx.ellipse(-10, -9, 8, 4, -0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+        },
+        {
+          id: 'atsuage',
+          name: '厚揚げ',
+          trait: '四角で安定◎',
+          width: 82,
+          height: 40,
+          createBody(x, y) {
+            return Bodies.rectangle(x, y, 82, 40, {
+              chamfer: { radius: 4 },
+              density: 0.0025,
+              friction: 0.72,
+              frictionStatic: 0.85,
+              frictionAir: 0.01,
+              restitution: 0.05
+            });
+          },
+          draw(ctx, w, h) {
+            ctx.save();
+            const r = 5;
+            ctx.fillStyle = '#c47225';
+            roundRect(ctx, -w / 2, -h / 2, w, h, r);
+            ctx.fill();
+
+            ctx.strokeStyle = '#7a3e0a';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // 内側の豆腐部分
+            ctx.fillStyle = '#fff9eb';
+            roundRect(ctx, -w / 2 + 6, -h / 2 + 6, w - 12, h - 12, 3);
+            ctx.fill();
+
+            ctx.fillStyle = '#e6d5b8';
+            ctx.fillRect(-16, -4, 3, 2);
+            ctx.fillRect(10, 3, 4, 2);
+            ctx.fillRect(-4, 5, 3, 2);
+            ctx.restore();
+          }
+        },
+        {
+          id: 'hanpen',
+          name: 'はんぺん',
+          trait: '軽くて少し弾む',
+          width: 90,
+          height: 32,
+          createBody(x, y) {
+            return Bodies.rectangle(x, y, 90, 32, {
+              chamfer: { radius: 7 },
+              density: 0.0009,        // 非常に軽い（上に乗せやすい）
+              friction: 0.62,
+              frictionStatic: 0.70,
+              frictionAir: 0.018,
+              restitution: 0.28       // ふわふわ弾む
+            });
+          },
+          draw(ctx, w, h) {
+            ctx.save();
+            const r = 8;
+            const grad = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+            grad.addColorStop(0, '#ffffff');
+            grad.addColorStop(0.8, '#f5f2eb');
+            grad.addColorStop(1, '#e0d8c8');
+
+            ctx.fillStyle = grad;
+            roundRect(ctx, -w / 2, -h / 2, w, h, r);
+            ctx.fill();
+
+            ctx.strokeStyle = '#c4baa8';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.strokeStyle = 'rgba(195, 185, 170, 0.65)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(-18, 0, 5, 0.2, Math.PI - 0.2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(16, -2, 5, 0.2, Math.PI - 0.2);
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
+      ];
+
+      function roundRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+      }
+
+      // ==========================================
+      // 3. Matter.js 物理ワールド＆ゲーム状態管理
+      // ==========================================
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+      const nextCanvas = document.getElementById('nextCanvas');
+      const nextCtx = nextCanvas.getContext('2d');
+
+      const scoreDisplay = document.getElementById('scoreDisplay');
+      const highScoreDisplay = document.getElementById('highScoreDisplay');
+      const heightDisplay = document.getElementById('heightDisplay');
+      const nextNameEl = document.getElementById('nextName');
+      const nextTraitEl = document.getElementById('nextTrait');
+
+      const cooldownHud = document.getElementById('cooldownHud');
+      const cooldownText = document.getElementById('cooldownText');
+      const cooldownBarFill = document.getElementById('cooldownBarFill');
+      const dropBtn = document.getElementById('dropBtn');
+
+      const startOverlay = document.getElementById('startOverlay');
+      const gameOverOverlay = document.getElementById('gameOverOverlay');
+      const hintBadge = document.getElementById('hintBadge');
+
+      const STORAGE_KEY = 'oden_tower_physics_highscore_v2';
+      let highScore = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
+      highScoreDisplay.textContent = highScore;
+
+      // Matter.js エンジン初期化（位置・速度反復回数を高めて積み上げの安定性を向上）
+      const engine = Engine.create({
+        positionIterations: 10,
+        velocityIterations: 8,
+        constraintIterations: 4
+      });
+      engine.world.gravity.y = 1.05;
+
+      // ゲーム状態変数
+      let gameState = 'START'; // 'START' | 'PLAYING' | 'GAMEOVER'
+      let score = 0;
+      let towerHeightCm = 0;
+      let cameraY = 0;
+      let targetCameraY = 0;
+
+      // 連打防止クールダウン管理
+      const MIN_COOLDOWN_MS = 1050; // 最低1.05秒は次を落とせない
+      let canDrop = true;
+      let dropTimestamp = 0;
+      let lastDroppedEntry = null;
+
+      // 木のお皿（固定剛体）
+      let plateBody = null;
+      const plateSpec = {
+        x: 200,
+        y: 540,
+        width: 210,
+        height: 22
+      };
+
+      // ワールド内の具材エントリー一覧: { body, type, hasCollided, slideSparkTimer }
+      let odenEntries = [];
+      let particles = []; // 湯気・こんにゃく滑りエフェクト
+
+      // 上部クレーン（箸）スポナー
+      let spawner = {
+        type: null,
+        nextType: null,
+        x: 200,
+        screenY: 74,
+        phase: 0
+      };
+
+      // ==========================================
+      // 4. 衝突イベント（効果音・湯気エフェクト）
+      // ==========================================
+      Events.on(engine, 'collisionStart', (event) => {
+        if (gameState !== 'PLAYING') return;
+        const pairs = event.pairs;
+        for (let i = 0; i < pairs.length; i++) {
+          const { bodyA, bodyB } = pairs[i];
+          const relVx = bodyA.velocity.x - bodyB.velocity.x;
+          const relVy = bodyA.velocity.y - bodyB.velocity.y;
+          const impact = Math.hypot(relVx, relVy);
+
+          const entryA = odenEntries.find((e) => e.body === bodyA);
+          const entryB = odenEntries.find((e) => e.body === bodyB);
+
+          if (entryA) entryA.hasCollided = true;
+          if (entryB) entryB.hasCollided = true;
+
+          if (impact > 1.3) {
+            const isKonnyaku = (entryA && entryA.type.id === 'konnyaku') || (entryB && entryB.type.id === 'konnyaku');
+            sound.playHit(impact, isKonnyaku);
+
+            // 着地時のほわっとした湯気パーティクル
+            const hitBody = entryA ? bodyA : bodyB;
+            if (hitBody && impact > 2.2) {
+              spawnSteamParticles(hitBody.position.x, hitBody.position.y + 12, 6);
+            }
+          }
+        }
+      });
+
+      // ==========================================
+      // 5. レスポンシブCanvasリサイズ＆お皿配置
+      // ==========================================
+      let logicalWidth = 400;
+      let logicalHeight = 600;
+
+      function resizeCanvas() {
+        const container = document.getElementById('canvasContainer');
+        const rect = container.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+        logicalWidth = rect.width;
+        logicalHeight = rect.height;
+
+        canvas.width = logicalWidth * dpr;
+        canvas.height = logicalHeight * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        const newPlateX = logicalWidth / 2;
+        const newPlateY = logicalHeight - 46;
+        plateSpec.width = Math.min(220, logicalWidth * 0.56);
+
+        if (plateBody) {
+          const dx = newPlateX - plateSpec.x;
+          const dy = newPlateY - plateSpec.y;
+          Body.setPosition(plateBody, { x: newPlateX, y: newPlateY });
+          // 既に積まれている具材も画面リサイズに合わせて平行移動
+          odenEntries.forEach((entry) => {
+            Body.setPosition(entry.body, {
+              x: entry.body.position.x + dx,
+              y: entry.body.position.y + dy
+            });
+          });
+        }
+
+        plateSpec.x = newPlateX;
+        plateSpec.y = newPlateY;
+      }
+
+      window.addEventListener('resize', resizeCanvas);
+      resizeCanvas();
+
+      // ==========================================
+      // 6. ゲーム初期化＆具材抽選
+      // ==========================================
+      function getRandomOdenType() {
+        // 最初の1〜2個目は土台になりやすい大根・厚揚げ・はんぺんから出す
+        if (score < 2) {
+          const basePool = [ODEN_TYPES[0], ODEN_TYPES[4], ODEN_TYPES[5]];
+          return basePool[Math.floor(Math.random() * basePool.length)];
+        }
+        return ODEN_TYPES[Math.floor(Math.random() * ODEN_TYPES.length)];
+      }
+
+      function updateNextPreview() {
+        if (!spawner.nextType) return;
+        nextNameEl.textContent = spawner.nextType.name;
+        nextTraitEl.textContent = spawner.nextType.trait;
+
+        nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+        nextCtx.save();
+        nextCtx.translate(nextCanvas.width / 2, nextCanvas.height / 2);
+        const scale = 0.62;
+        nextCtx.scale(scale, scale);
+        spawner.nextType.draw(nextCtx, spawner.nextType.width, spawner.nextType.height);
+        nextCtx.restore();
+      }
+
+      function createPlateBody() {
+        if (plateBody) {
+          World.remove(engine.world, plateBody);
+        }
+        // お皿の縁にわずかな返し（縁）を作ってリアルな皿形状にする
+        const w = plateSpec.width;
+        const h = plateSpec.height;
+        const base = Bodies.rectangle(plateSpec.x, plateSpec.y, w, h, {
+          isStatic: true,
+          friction: 0.85,
+          frictionStatic: 1.0,
+          restitution: 0.02,
+          chamfer: { radius: 4 }
+        });
+        plateBody = base;
+        World.add(engine.world, plateBody);
+      }
+
+      function resetGame() {
+        // 物理ワールドをクリア
+        Composite.clear(engine.world, false);
+        odenEntries = [];
+        particles = [];
+        lastDroppedEntry = null;
+
+        createPlateBody();
+
+        score = 0;
+        towerHeightCm = 0;
+        scoreDisplay.textContent = '0';
+        heightDisplay.textContent = '0.0';
+
+        cameraY = 0;
+        targetCameraY = 0;
+
+        spawner.type = getRandomOdenType();
+        spawner.nextType = getRandomOdenType();
+        spawner.x = logicalWidth / 2;
+        spawner.phase = 0;
+
+        canDrop = true;
+        dropBtn.disabled = false;
+        updateCooldownUI(1, true);
+        updateNextPreview();
+
+        gameState = 'PLAYING';
+        startOverlay.classList.add('hidden');
+        gameOverOverlay.classList.add('hidden');
+        hintBadge.style.display = 'block';
+      }
+
+      // ==========================================
+      // 7. 具材投下＆連打防止クールダウンロジック
+      // ==========================================
+      function dropCurrentItem() {
+        if (gameState !== 'PLAYING' || !canDrop) return;
+
+        sound.playDrop();
+        hintBadge.style.display = 'none';
+
+        // 画面上部のスポナー位置をワールド座標に変換して剛体生成
+        const worldSpawnX = spawner.x;
+        const worldSpawnY = spawner.screenY - cameraY;
+
+        const body = spawner.type.createBody(worldSpawnX, worldSpawnY);
+        World.add(engine.world, body);
+
+        const entry = {
+          body,
+          type: spawner.type,
+          hasCollided: false,
+          slideSparkTimer: 0
+        };
+        odenEntries.push(entry);
+        lastDroppedEntry = entry;
+
+        // 連打防止ロック開始
+        canDrop = false;
+        dropTimestamp = performance.now();
+        dropBtn.disabled = true;
+
+        // 次の具材をセット（クールダウン完了後に箸に表示される）
+        spawner.type = spawner.nextType;
+        spawner.nextType = getRandomOdenType();
+        updateNextPreview();
+      }
+
+      function updateCooldownUI(progress, isReady) {
+        const pct = Math.min(100, Math.max(0, Math.round(progress * 100)));
+        cooldownBarFill.style.width = `${pct}%`;
+
+        if (isReady) {
+          cooldownHud.classList.add('ready');
+          cooldownText.textContent = '投下OK!';
+        } else {
+          cooldownHud.classList.remove('ready');
+          cooldownText.textContent = '安定待機中…';
+        }
+      }
+
+      function evaluateCooldownAndStability() {
+        if (canDrop || gameState !== 'PLAYING') return;
+
+        const elapsed = performance.now() - dropTimestamp;
+        const timeRatio = Math.min(1, elapsed / MIN_COOLDOWN_MS);
+
+        // 直前に落とした具材が何かに接触し、ある程度速度が落ち着いているか確認
+        let isSettled = false;
+        if (lastDroppedEntry && lastDroppedEntry.hasCollided) {
+          const speed = lastDroppedEntry.body.speed;
+          const angSpeed = Math.abs(lastDroppedEntry.body.angularVelocity);
+          // こんにゃくが滑っている最中や、激しく転がっている最中は待機を延長（最大2.6秒まで）
+          if ((speed < 0.75 && angSpeed < 0.06) || elapsed > 2600) {
+            isSettled = true;
+          }
+        } else if (elapsed > 2600) {
+          isSettled = true;
+        }
+
+        const totalProgress = isSettled ? timeRatio : Math.min(0.88, timeRatio * 0.88);
+        updateCooldownUI(totalProgress, false);
+
+        if (timeRatio >= 1 && isSettled) {
+          canDrop = true;
+          dropBtn.disabled = false;
+          updateCooldownUI(1, true);
+        }
+      }
+
+      // ==========================================
+      // 8. こんにゃく滑り演出・スコア・カメラ更新
+      // ==========================================
+      function spawnSteamParticles(x, y, count = 6, isSlideSpark = false) {
+        for (let i = 0; i < count; i++) {
+          particles.push({
+            x: x + (Math.random() - 0.5) * 32,
+            y: y,
+            vx: (Math.random() - 0.5) * (isSlideSpark ? 2.2 : 0.7),
+            vy: isSlideSpark ? (-0.5 - Math.random() * 1.2) : (-0.7 - Math.random() * 1.3),
+            size: isSlideSpark ? (2.5 + Math.random() * 2.5) : (4 + Math.random() * 5),
+            alpha: isSlideSpark ? 0.9 : 0.6,
+            life: 1.0,
+            isSlideSpark
+          });
+        }
+      }
+
+      function updatePhysicsAndRules() {
+        // 固定タイムステップで安定シミュレーション
+        Engine.update(engine, 1000 / 60);
+
+        // こんにゃくの滑り検知＆ツルツルエフェクト
+        odenEntries.forEach((entry) => {
+          if (entry.type.id === 'konnyaku' && entry.hasCollided) {
+            const vx = Math.abs(entry.body.velocity.x);
+            const vy = Math.abs(entry.body.velocity.y);
+            // 横方向に滑っているとき（落下中ではなく接触して横滑り中）
+            if (vx > 0.65 && vy < 2.5) {
+              sound.playKonnyakuSlide();
+              entry.slideSparkTimer++;
+              if (entry.slideSparkTimer % 4 === 0) {
+                spawnSteamParticles(entry.body.position.x, entry.body.position.y + 18, 2, true);
+              }
+            }
+          }
+        });
+
+        // 画面外（お皿より下の危険ライン）への落下チェック
+        const failLineY = plateSpec.y + 75;
+        let highestY = plateSpec.y - plateSpec.height / 2;
+        let settledCount = 0;
+
+        for (let i = 0; i < odenEntries.length; i++) {
+          const entry = odenEntries[i];
+          const pos = entry.body.position;
+
+          // 1つでもお皿から落ちて画面外ラインを超えたら即ゲームオーバー
+          if (pos.y > failLineY || pos.x < -80 || pos.x > logicalWidth + 80) {
+            if (gameState === 'PLAYING') {
+              triggerGameOver();
+            }
+            return;
+          }
+
+          // お皿より上に乗っている具材の最高到達点を計算
+          if (entry.hasCollided && pos.y < plateSpec.y) {
+            settledCount++;
+            const topEdgeY = pos.y - entry.type.height * 0.45;
+            if (topEdgeY < highestY) {
+              highestY = topEdgeY;
+            }
+          }
+        }
+
+        // スコア＆高さ（cm換算：16px ≒ 1cm）のリアルタイム更新
+        if (gameState === 'PLAYING') {
+          score = settledCount;
+          scoreDisplay.textContent = score;
+          if (score > highScore) {
+            highScore = score;
+            highScoreDisplay.textContent = highScore;
+            localStorage.setItem(STORAGE_KEY, String(highScore));
+          }
+
+          const plateSurfaceY = plateSpec.y - plateSpec.height / 2;
+          const heightPx = Math.max(0, plateSurfaceY - highestY);
+          towerHeightCm = Math.round((heightPx / 15) * 10) / 10;
+          heightDisplay.textContent = towerHeightCm.toFixed(1);
+
+          // カメラの滑らかな上スクロール（タワー上端が画面の約52%より高くなったら追従）
+          const desiredScreenTop = logicalHeight * 0.54;
+          if (highestY < desiredScreenTop) {
+            targetCameraY = desiredScreenTop - highestY;
+          } else {
+            targetCameraY = 0;
+          }
+        }
+      }
+
+      function triggerGameOver() {
+        gameState = 'GAMEOVER';
+        canDrop = false;
+        dropBtn.disabled = true;
+        sound.playGameOver();
+
+        setTimeout(() => {
+          const rank = getOdenRank(score, towerHeightCm);
+          document.getElementById('rankTitle').textContent = rank.title;
+          document.getElementById('finalScore').textContent = score;
+          document.getElementById('finalHeight').textContent = towerHeightCm.toFixed(1);
+          document.getElementById('rankComment').textContent = rank.comment;
+          gameOverOverlay.classList.remove('hidden');
+        }, 700);
+      }
+
+      function getOdenRank(count, cm) {
+        if (count === 0) {
+          return {
+            title: 'おでん皿洗い見習い',
+            comment: 'まずは大根や厚揚げをお皿のど真ん中に乗せてみよう！'
+          };
+        } else if (count <= 3) {
+          return {
+            title: '路地裏の新米屋台',
+            comment: `高さ ${cm.toFixed(1)}cm！こんにゃくの滑りやすさに気をつけよう。`
+          };
+        } else if (count <= 6) {
+          return {
+            title: '常連がつく人気おでん屋',
+            comment: '絶妙なバランス感覚！平らな具材で土台を作るのがコツだ！'
+          };
+        } else if (count <= 10) {
+          return {
+            title: '行列のできる名店大将',
+            comment: 'すごい安定感！転がるたまごやちくわも見事に乗りこなした！'
+          };
+        } else if (count <= 15) {
+          return {
+            title: '人間国宝・おでん匠',
+            comment: '重力を操る神業タワー！屋台の歴史に名を刻む名建築だ！'
+          };
+        } else {
+          return {
+            title: '伝説のおでん仙人',
+            comment: 'もはや芸術の領域…！天空まで届く究極のおでんタワー完成！'
+          };
+        }
+      }
+
+      // ==========================================
+      // 9. 描画ループ
+      // ==========================================
+      function drawBackground() {
+        ctx.save();
+        // 和風の格子模様
+        ctx.strokeStyle = 'rgba(255, 224, 178, 0.04)';
+        ctx.lineWidth = 1;
+        const gridSize = 48;
+        const offsetY = cameraY % gridSize;
+        for (let x = 0; x < logicalWidth; x += gridSize) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, logicalHeight);
+          ctx.stroke();
+        }
+        for (let y = offsetY; y < logicalHeight; y += gridSize) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(logicalWidth, y);
+          ctx.stroke();
+        }
+
+        // 高さ目安ライン（10cmごと）
+        const plateSurfaceY = plateSpec.y - plateSpec.height / 2;
+        for (let cm = 10; cm <= 200; cm += 10) {
+          const lineY = plateSurfaceY - cm * 15 + cameraY;
+          if (lineY > 36 && lineY < logicalHeight - 40) {
+            ctx.strokeStyle = 'rgba(247, 181, 56, 0.16)';
+            ctx.setLineDash([6, 6]);
+            ctx.beginPath();
+            ctx.moveTo(18, lineY);
+            ctx.lineTo(logicalWidth - 18, lineY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            ctx.fillStyle = 'rgba(247, 181, 56, 0.5)';
+            ctx.font = 'bold 11px "M PLUS Rounded 1c", sans-serif';
+            ctx.fillText(`${cm} cm`, 22, lineY - 5);
+          }
+        }
+        ctx.restore();
+      }
+
+      function drawWoodenPlate() {
+        const drawY = plateSpec.y + cameraY;
+        if (drawY > logicalHeight + 70) return;
+
+        ctx.save();
+        ctx.translate(plateSpec.x, drawY);
+
+        // 屋台のカウンターテーブル
+        ctx.fillStyle = '#2e190e';
+        ctx.fillRect(-logicalWidth / 2, plateSpec.height / 2, logicalWidth, 90);
+        ctx.fillStyle = '#4a2917';
+        ctx.fillRect(-logicalWidth / 2, plateSpec.height / 2, logicalWidth, 6);
+
+        // 木のお皿
+        const w = plateSpec.width;
+        const h = plateSpec.height;
+        const grad = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+        grad.addColorStop(0, '#e0a258');
+        grad.addColorStop(0.5, '#b5742c');
+        grad.addColorStop(1, '#824c16');
+
+        ctx.beginPath();
+        ctx.moveTo(-w / 2 - 10, -h / 2);
+        ctx.lineTo(w / 2 + 10, -h / 2);
+        ctx.lineTo(w / 2 - 8, h / 2);
+        ctx.lineTo(-w / 2 + 8, h / 2);
+        ctx.closePath();
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        ctx.strokeStyle = '#5c320b';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // お皿のハイライト
+        ctx.strokeStyle = 'rgba(255, 240, 205, 0.45)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(-w / 2 - 6, -h / 2 + 3);
+        ctx.lineTo(w / 2 + 6, -h / 2 + 3);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, logicalWidth, logicalHeight);
+
+        drawBackground();
+        drawWoodenPlate();
+
+        // 物理ワールド内のすべての具材を位置・回転角そのままに描画
+        odenEntries.forEach((entry) => {
+          const { body, type } = entry;
+          ctx.save();
+          ctx.translate(body.position.x, body.position.y + cameraY);
+          ctx.rotate(body.angle);
+
+          // こんにゃくが高速で横滑りしているときはわずかにぷるっと横伸びさせる
+          if (type.id === 'konnyaku' && entry.hasCollided) {
+            const slideSpeed = Math.min(1.5, Math.abs(body.velocity.x));
+            if (slideSpeed > 0.5) {
+              const jiggle = Math.sin(performance.now() * 0.04) * 0.05 * slideSpeed;
+              ctx.scale(1 + jiggle, 1 - jiggle);
+            }
+          }
+
+          type.draw(ctx, type.width, type.height);
+          ctx.restore();
+        });
+
+        // 上部クレーン（箸）＆投下待ち具材の描画
+        if (gameState === 'PLAYING' && spawner.type) {
+          // 箸の描画（クールダウン中は少し開いた状態で待機）
+          ctx.save();
+          ctx.strokeStyle = canDrop ? '#eab378' : 'rgba(234, 179, 120, 0.4)';
+          ctx.lineWidth = 3.5;
+          ctx.lineCap = 'round';
+          const chopstickSpread = canDrop ? 8 : 22;
+          ctx.beginPath();
+          ctx.moveTo(spawner.x - 46, 0);
+          ctx.lineTo(spawner.x - chopstickSpread, spawner.screenY - 4);
+          ctx.moveTo(spawner.x + 46, 0);
+          ctx.lineTo(spawner.x + chopstickSpread, spawner.screenY - 4);
+          ctx.stroke();
+          ctx.restore();
+
+          // クールダウン完了後のみ具材を箸に表示（連打防止を視覚的にも明確化）
+          if (canDrop) {
+            // 真下に落ちる目安の点線ガイド
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255, 248, 235, 0.24)';
+            ctx.setLineDash([4, 6]);
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(spawner.x, spawner.screenY + spawner.type.height / 2 + 4);
+            ctx.lineTo(spawner.x, logicalHeight - 48);
+            ctx.stroke();
+            ctx.restore();
+
+            ctx.save();
+            ctx.translate(spawner.x, spawner.screenY);
+            spawner.type.draw(ctx, spawner.type.width, spawner.type.height);
+            ctx.restore();
+          }
+        }
+
+        // 湯気＆こんにゃくツルツル粒子の描画
+        particles.forEach((p) => {
+          ctx.save();
+          if (p.isSlideSpark) {
+            ctx.fillStyle = `rgba(180, 235, 255, ${p.alpha * p.life})`;
+          } else {
+            ctx.fillStyle = `rgba(255, 250, 240, ${p.alpha * p.life})`;
+          }
+          ctx.beginPath();
+          ctx.arc(p.x, p.y + cameraY, p.size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        });
+      }
+
+      function update() {
+        cameraY += (targetCameraY - cameraY) * 0.08;
+
+        if (gameState === 'PLAYING') {
+          // 箸の左右往復運動
+          const swingSpeed = Math.min(0.052, 0.025 + score * 0.0014);
+          spawner.phase += swingSpeed;
+          const swingRange = Math.min(logicalWidth * 0.36, 138);
+          spawner.x = logicalWidth / 2 + Math.sin(spawner.phase) * swingRange;
+
+          evaluateCooldownAndStability();
+          updatePhysicsAndRules();
+        } else if (gameState === 'GAMEOVER') {
+          // ゲームオーバー後も崩落物理アニメーションは継続
+          Engine.update(engine, 1000 / 60);
+        }
+
+        // パーティクル更新
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.life -= p.isSlideSpark ? 0.045 : 0.022;
+          if (!p.isSlideSpark) p.size += 0.12;
+          if (p.life <= 0) {
+            particles.splice(i, 1);
+          }
+        }
+      }
+
+      function gameLoop() {
+        update();
+        draw();
+        requestAnimationFrame(gameLoop);
+      }
+
+      // ==========================================
+      // 10. イベントリスナー登録
+      // ==========================================
+      document.getElementById('startBtn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        sound.init();
+        resetGame();
+      });
+
+      document.getElementById('retryBtn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        sound.init();
+        resetGame();
+      });
+
+      document.getElementById('soundToggle').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isMuted = sound.toggleMute();
+        e.currentTarget.textContent = isMuted ? '🔇' : '🔊';
+      });
+
+      const canvasContainer = document.getElementById('canvasContainer');
+      canvasContainer.addEventListener('pointerdown', (e) => {
+        if (gameState === 'PLAYING') {
+          e.preventDefault();
+          dropCurrentItem();
+        }
+      });
+
+      dropBtn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        if (gameState === 'PLAYING') {
+          dropCurrentItem();
+        } else if (gameState === 'START') {
+          sound.init();
+          resetGame();
+        }
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.repeat) return; // キー押しっぱなし連打防止
+        if (e.code === 'Space' || e.code === 'ArrowDown') {
+          e.preventDefault();
+          if (gameState === 'PLAYING') {
+            dropCurrentItem();
+          } else if (gameState === 'START') {
+            sound.init();
+            resetGame();
+          } else if (gameState === 'GAMEOVER' && !gameOverOverlay.classList.contains('hidden')) {
+            sound.init();
+            resetGame();
+          }
+        }
+      });
+
+      window.onload = () => {
+        resizeCanvas();
+        createPlateBody();
+        spawner.type = ODEN_TYPES[0];
+        spawner.nextType = ODEN_TYPES[1];
+        updateNextPreview();
+        gameLoop();
+      };
+    })();
+  </script>
+</body>
+</html>
