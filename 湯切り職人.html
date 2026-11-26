@@ -1,0 +1,1508 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>湯切り職人 - 15秒の屋台勝負</title>
+  <style>
+    :root {
+      --bg-dark: #16110e;
+      --panel-bg: #241b15;
+      --panel-border: #4a3728;
+      --accent-gold: #f5b727;
+      --accent-red: #e04836;
+      --accent-green: #4ec27a;
+      --text-main: #fff6e8;
+      --text-sub: #c4b099;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100dvh;
+      background: radial-gradient(circle at 50% 25%, #2b1f17 0%, var(--bg-dark) 75%);
+      color: var(--text-main);
+      font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .app-shell {
+      width: min(760px, 96vw);
+      height: min(860px, 96dvh);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .hud {
+      background: linear-gradient(180deg, #2d2119 0%, var(--panel-bg) 100%);
+      border: 2px solid var(--panel-border);
+      border-radius: 14px;
+      padding: 8px 12px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+      flex-shrink: 0;
+    }
+
+    .hud-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: 10px;
+      padding: 5px 6px;
+      min-width: 0;
+    }
+
+    .hud-label {
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      color: var(--text-sub);
+      white-space: nowrap;
+    }
+
+    .hud-value {
+      font-size: clamp(16px, 3vw, 22px);
+      font-weight: 800;
+      line-height: 1.2;
+      margin-top: 2px;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .hud-value.time-urgent {
+      color: #ff5b47;
+      animation: pulse 0.45s infinite alternate;
+    }
+
+    @keyframes pulse {
+      from { transform: scale(1); }
+      to { transform: scale(1.08); }
+    }
+
+    .stage-wrap {
+      position: relative;
+      flex: 1;
+      min-height: 280px;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 2px solid var(--panel-border);
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.6);
+      background: #1a120d;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+      touch-action: none;
+    }
+
+    canvas:active {
+      cursor: grabbing;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(14, 10, 7, 0.88);
+      backdrop-filter: blur(4px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      text-align: center;
+      z-index: 20;
+      overflow-y: auto;
+    }
+
+    .overlay.hidden {
+      display: none;
+    }
+
+    .title-badge {
+      background: var(--accent-red);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 999px;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+
+    .overlay h1 {
+      margin: 0 0 8px;
+      font-size: clamp(24px, 5vw, 38px);
+      color: var(--accent-gold);
+      text-shadow: 0 3px 0 #59260a;
+    }
+
+    .overlay p {
+      margin: 0 0 14px;
+      max-width: 500px;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text-sub);
+    }
+
+    .rule-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      width: 100%;
+      max-width: 540px;
+      margin-bottom: 16px;
+      text-align: left;
+    }
+
+    .rule-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 11.5px;
+      line-height: 1.45;
+    }
+
+    .rule-card strong {
+      display: block;
+      color: var(--accent-gold);
+      margin-bottom: 3px;
+      font-size: 12.5px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(180deg, #ffca3a 0%, #e59812 100%);
+      color: #241204;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 28px;
+      font-size: 17px;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 5px 0 #8a4f04, 0 10px 20px rgba(0, 0, 0, 0.4);
+      transition: transform 0.08s ease;
+      position: relative;
+      z-index: 25;
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.05);
+    }
+
+    .btn-primary:active {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 #8a4f04;
+    }
+
+    .result-score {
+      font-size: clamp(32px, 6vw, 44px);
+      font-weight: 900;
+      color: var(--accent-gold);
+      margin: 4px 0 8px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .result-rank {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 8px;
+      background: rgba(245, 183, 39, 0.18);
+      border: 1px solid var(--accent-gold);
+      color: var(--accent-gold);
+      font-weight: 800;
+      margin-bottom: 12px;
+      font-size: 13.5px;
+    }
+
+    .result-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      margin-bottom: 16px;
+      font-size: 12.5px;
+      color: var(--text-sub);
+    }
+
+    .controls-bar {
+      background: var(--panel-bg);
+      border: 2px solid var(--panel-border);
+      border-radius: 14px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .serve-btn {
+      flex: 1;
+      height: 48px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(180deg, #ff5f49 0%, #c83220 100%);
+      color: #fff;
+      font-size: clamp(14px, 3vw, 17px);
+      font-weight: 900;
+      letter-spacing: 0.03em;
+      cursor: pointer;
+      box-shadow: 0 5px 0 #6e160c;
+      transition: transform 0.08s ease, filter 0.15s ease;
+    }
+
+    .serve-btn:active:not(:disabled) {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 #6e160c;
+    }
+
+    .serve-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      filter: grayscale(0.4);
+    }
+
+    .key-hint {
+      font-size: 11.5px;
+      color: var(--text-sub);
+      line-height: 1.4;
+      min-width: 155px;
+      text-align: right;
+    }
+
+    .key-hint kbd {
+      background: #36281e;
+      border: 1px solid #6b513d;
+      border-radius: 5px;
+      padding: 1px 5px;
+      font-size: 10.5px;
+      color: var(--text-main);
+    }
+
+    .sound-toggle {
+      background: #36281e;
+      color: var(--text-main);
+      border: 1px solid #6b513d;
+      border-radius: 10px;
+      padding: 0 10px;
+      height: 48px;
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 560px) {
+      .hud {
+        grid-template-columns: repeat(2, 1fr);
+        padding: 6px 8px;
+        gap: 6px;
+      }
+      .rule-grid {
+        grid-template-columns: 1fr;
+      }
+      .key-hint {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <div class="hud">
+      <div class="hud-box">
+        <span class="hud-label">残り時間</span>
+        <span class="hud-value" id="hudTime">15.0</span>
+      </div>
+      <div class="hud-box">
+        <span class="hud-label">スコア</span>
+        <span class="hud-value" id="hudScore">0</span>
+      </div>
+      <div class="hud-box">
+        <span class="hud-label">コンボ / 一丁</span>
+        <span class="hud-value" id="hudCombo">0x / 0杯</span>
+      </div>
+      <div class="hud-box">
+        <span class="hud-label">ハイスコア</span>
+        <span class="hud-value" id="hudBest">0</span>
+      </div>
+    </div>
+
+    <div class="stage-wrap">
+      <canvas id="gameCanvas"></canvas>
+
+      <div class="overlay" id="startOverlay">
+        <div class="title-badge">15秒 タイムアタック</div>
+        <h1>湯切り職人</h1>
+        <p>
+          平ザルを上下にシャカシャカ振ってお湯を切り、湯切り60%以上で丼へ盛り付けろ！<br />
+          連打は効かないぞ。振りすぎると麺がこぼれるので見極めが勝負！
+        </p>
+        <div class="rule-grid">
+          <div class="rule-card">
+            <strong>① 上下に振る</strong>
+            上下ドラッグ／タップ、または <kbd>↑</kbd><kbd>↓</kbd> / <kbd>W</kbd><kbd>S</kbd> でザルを振ろう。
+          </div>
+          <div class="rule-card">
+            <strong>② 60%以上で盛り付け</strong>
+            湯切り60%未満では盛り付け不可。82〜98%のジャストを狙え！
+          </div>
+          <div class="rule-card">
+            <strong>③ ハイ、一丁！</strong>
+            <kbd>Space</kbd> か赤いボタンで丼へ投入。リロード後に次玉が来るぞ。
+          </div>
+        </div>
+        <button class="btn-primary" id="startBtn" type="button">営業開始（15秒）</button>
+      </div>
+
+      <div class="overlay hidden" id="resultOverlay">
+        <div class="title-badge">営業終了！</div>
+        <h1>本日の結果</h1>
+        <div class="result-score" id="finalScore">0点</div>
+        <div class="result-rank" id="finalRank">見習い湯切り</div>
+        <div class="result-stats">
+          <span id="statServed">盛り付け: 0杯</span>
+          <span id="statPerfect">ジャスト: 0回</span>
+          <span id="statSpill">こぼし: 0回</span>
+        </div>
+        <button class="btn-primary" id="retryBtn" type="button">もう一度挑戦する</button>
+      </div>
+    </div>
+
+    <div class="controls-bar">
+      <button class="sound-toggle" id="soundBtn" type="button" title="効果音切り替え">🔊 音: ON</button>
+      <button class="serve-btn" id="serveBtn" type="button" disabled>湯切り60%以上で盛り付け</button>
+      <div class="key-hint">
+        振る: <kbd>↑</kbd><kbd>↓</kbd> / <kbd>W</kbd><kbd>S</kbd> / ドラッグ<br />
+        盛り付け: <kbd>Space</kbd>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
+
+      const hudTime = document.getElementById("hudTime");
+      const hudScore = document.getElementById("hudScore");
+      const hudCombo = document.getElementById("hudCombo");
+      const hudBest = document.getElementById("hudBest");
+
+      const startOverlay = document.getElementById("startOverlay");
+      const resultOverlay = document.getElementById("resultOverlay");
+      const startBtn = document.getElementById("startBtn");
+      const retryBtn = document.getElementById("retryBtn");
+      const serveBtn = document.getElementById("serveBtn");
+      const soundBtn = document.getElementById("soundBtn");
+
+      const finalScoreEl = document.getElementById("finalScore");
+      const finalRankEl = document.getElementById("finalRank");
+      const statServedEl = document.getElementById("statServed");
+      const statPerfectEl = document.getElementById("statPerfect");
+      const statSpillEl = document.getElementById("statSpill");
+
+      const STORAGE_KEY = "yukiri_shokunin_best_v2";
+      const GAME_DURATION = 15.0;
+      const MIN_SERVE_DRAIN = 60.0;
+      const SERVE_RELOAD_SEC = 0.45;
+
+      let soundEnabled = true;
+      let audioCtx = null;
+
+      function ensureAudio() {
+        if (!soundEnabled) return null;
+        try {
+          if (!audioCtx) {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (AudioContextClass) {
+              audioCtx = new AudioContextClass();
+            }
+          }
+          if (audioCtx && audioCtx.state === "suspended") {
+            audioCtx.resume().catch(() => {});
+          }
+        } catch (_) {
+          return null;
+        }
+        return audioCtx;
+      }
+
+      function playShakeSound(intensity) {
+        const ac = ensureAudio();
+        if (!ac) return;
+        try {
+          const now = ac.currentTime;
+          const bufferSize = Math.floor(ac.sampleRate * 0.045);
+          const buffer = ac.createBuffer(1, bufferSize, ac.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+          }
+          const noise = ac.createBufferSource();
+          noise.buffer = buffer;
+
+          const filter = ac.createBiquadFilter();
+          filter.type = "bandpass";
+          filter.frequency.setValueAtTime(950 + Math.min(intensity * 900, 1400), now);
+          filter.Q.setValueAtTime(1.6, now);
+
+          const gain = ac.createGain();
+          gain.gain.setValueAtTime(Math.min(0.18, 0.05 + intensity * 0.12), now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
+
+          noise.connect(filter);
+          filter.connect(gain);
+          gain.connect(ac.destination);
+          noise.start(now);
+        } catch (_) {}
+      }
+
+      function playServeSound(isPerfect) {
+        const ac = ensureAudio();
+        if (!ac) return;
+        try {
+          const now = ac.currentTime;
+          const freqs = isPerfect ? [523.25, 659.25, 783.99, 1046.5] : [440, 554.37];
+          freqs.forEach((f, idx) => {
+            const osc = ac.createOscillator();
+            const gain = ac.createGain();
+            osc.type = isPerfect ? "triangle" : "sine";
+            osc.frequency.setValueAtTime(f, now + idx * 0.045);
+            gain.gain.setValueAtTime(0.14, now + idx * 0.045);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.045 + 0.16);
+            osc.connect(gain);
+            gain.connect(ac.destination);
+            osc.start(now + idx * 0.045);
+            osc.stop(now + idx * 0.045 + 0.17);
+          });
+        } catch (_) {}
+      }
+
+      function playSpillSound() {
+        const ac = ensureAudio();
+        if (!ac) return;
+        try {
+          const now = ac.currentTime;
+          const osc = ac.createOscillator();
+          const gain = ac.createGain();
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(220, now);
+          osc.frequency.exponentialRampToValueAtTime(75, now + 0.28);
+          gain.gain.setValueAtTime(0.16, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.29);
+          osc.connect(gain);
+          gain.connect(ac.destination);
+          osc.start(now);
+          osc.stop(now + 0.3);
+        } catch (_) {}
+      }
+
+      function playBlockedSound() {
+        const ac = ensureAudio();
+        if (!ac) return;
+        try {
+          const now = ac.currentTime;
+          const osc = ac.createOscillator();
+          const gain = ac.createGain();
+          osc.type = "square";
+          osc.frequency.setValueAtTime(165, now);
+          gain.gain.setValueAtTime(0.07, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+          osc.connect(gain);
+          gain.connect(ac.destination);
+          osc.start(now);
+          osc.stop(now + 0.085);
+        } catch (_) {}
+      }
+
+      function playTickSound(urgent) {
+        const ac = ensureAudio();
+        if (!ac) return;
+        try {
+          const now = ac.currentTime;
+          const osc = ac.createOscillator();
+          const gain = ac.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(urgent ? 880 : 660, now);
+          gain.gain.setValueAtTime(urgent ? 0.11 : 0.06, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+          osc.connect(gain);
+          gain.connect(ac.destination);
+          osc.start(now);
+          osc.stop(now + 0.08);
+        } catch (_) {}
+      }
+
+      soundBtn.addEventListener("click", () => {
+        soundEnabled = !soundEnabled;
+        soundBtn.textContent = soundEnabled ? "🔊 音: ON" : "🔇 音: OFF";
+        if (soundEnabled) ensureAudio();
+      });
+
+      let bestScore = 0;
+      try {
+        bestScore = Number(localStorage.getItem(STORAGE_KEY) || "0") || 0;
+      } catch (_) {}
+      hudBest.textContent = bestScore.toLocaleString();
+
+      let width = 760;
+      let height = 560;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+      function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        width = Math.max(280, rect.width || 760);
+        height = Math.max(240, rect.height || 500);
+        canvas.width = Math.floor(width * dpr);
+        canvas.height = Math.floor(height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      window.addEventListener("resize", resizeCanvas);
+      resizeCanvas();
+
+      // 楕円ボウル内の麺ノード物理モデル（1本あたりNノードのバネ拘束＋壁面反発＆摩擦）
+      const STRAND_DEFS = [
+        { count: 9, spanRatio: 0.64, baseY: -6, phase: 0.0, tone: 0 },
+        { count: 9, spanRatio: 0.68, baseY: -2, phase: 0.9, tone: 1 },
+        { count: 9, spanRatio: 0.70, baseY: 2,  phase: 1.8, tone: 0 },
+        { count: 9, spanRatio: 0.66, baseY: 6,  phase: 2.7, tone: 1 },
+        { count: 8, spanRatio: 0.58, baseY: -4, phase: 3.5, tone: 0 },
+        { count: 8, spanRatio: 0.60, baseY: 4,  phase: 4.4, tone: 1 }
+      ];
+
+      function createNoodleMesh() {
+        return STRAND_DEFS.map((def) => {
+          const nodes = [];
+          for (let i = 0; i < def.count; i++) {
+            const u = def.count === 1 ? 0 : (i / (def.count - 1)) * 2 - 1; // -1 〜 +1
+            const x = u * 64 * def.spanRatio;
+            const y = def.baseY + Math.sin(u * Math.PI + def.phase) * 3.5;
+            nodes.push({
+              x,
+              y,
+              vx: 0,
+              vy: 0,
+              restX: x,
+              restY: y,
+              escaped: false
+            });
+          }
+          return {
+            nodes,
+            tone: def.tone,
+            phase: def.phase
+          };
+        });
+      }
+
+      const state = {
+        phase: "title",
+        timeLeft: GAME_DURATION,
+        lastWholeSecond: 15,
+        score: 0,
+        combo: 0,
+        servedCount: 0,
+        perfectCount: 0,
+        spillCount: 0,
+
+        basketY: 0,
+        basketVy: 0,
+        basketTilt: 0,
+        drain: 0,
+        spill: 0,
+        shakeCooldown: 0,
+        recovering: false,
+        recoverTimer: 0,
+        reloading: false,
+        reloadTimer: 0,
+        blockWarnCooldown: 0,
+
+        mesh: createNoodleMesh(),
+
+        tossAnim: 0,
+        bowlsServed: 0,
+
+        particles: [],
+        popups: [],
+
+        pointerActive: false,
+        lastPointerY: 0,
+        tapDir: -1,
+        keys: {
+          up: false,
+          down: false,
+          lastDir: 0
+        }
+      };
+
+      function getBasketDims() {
+        const rx = Math.min(108, width * 0.185);
+        const ry = 22;
+        return { rx, ry };
+      }
+
+      function resetBatch(keepMesh = false) {
+        state.drain = 0;
+        state.spill = 0;
+        state.recovering = false;
+        state.recoverTimer = 0;
+        state.reloading = false;
+        state.reloadTimer = 0;
+        if (!keepMesh) {
+          state.mesh = createNoodleMesh();
+        }
+      }
+
+      function syncServeButton() {
+        if (state.phase !== "playing" || state.recovering || state.reloading) {
+          serveBtn.disabled = true;
+          serveBtn.textContent = state.reloading ? "麺投入中…" : "丼に盛り付け！（Space）";
+          return;
+        }
+        const ready = state.drain >= MIN_SERVE_DRAIN;
+        serveBtn.disabled = false;
+        serveBtn.textContent = ready
+          ? "丼に盛り付け！（Space）"
+          : `湯切り${Math.ceil(MIN_SERVE_DRAIN)}%以上で盛り付け`;
+      }
+
+      function startGame() {
+        resizeCanvas();
+        ensureAudio();
+        state.phase = "playing";
+        state.timeLeft = GAME_DURATION;
+        state.lastWholeSecond = Math.ceil(GAME_DURATION);
+        state.score = 0;
+        state.combo = 0;
+        state.servedCount = 0;
+        state.perfectCount = 0;
+        state.spillCount = 0;
+        state.basketY = 0;
+        state.basketVy = 0;
+        state.basketTilt = 0;
+        state.tossAnim = 0;
+        state.bowlsServed = 0;
+        state.particles = [];
+        state.popups = [];
+        state.tapDir = -1;
+        state.blockWarnCooldown = 0;
+        resetBatch(false);
+
+        startOverlay.classList.add("hidden");
+        resultOverlay.classList.add("hidden");
+        updateHud();
+        syncServeButton();
+        playTickSound(false);
+      }
+
+      function getRankInfo(score) {
+        if (score >= 4000) return { label: "伝説の湯切り仙人", comment: "湯気まで操る神業の湯切り！" };
+        if (score >= 2600) return { label: "行列店の花形職人", comment: "キレのある湯切りで客を魅了！" };
+        if (score >= 1400) return { label: "一人前のラーメン職人", comment: "しっかり湯が切れて美味い一杯！" };
+        if (score >= 500) return { label: "見習い湯切り", comment: "60%以上まで振って盛り付けよう！" };
+        return { label: "びしょびしょ修行中", comment: "まずは湯切り60%を目指そう！" };
+      }
+
+      function finishGame() {
+        state.phase = "result";
+        state.timeLeft = 0;
+        syncServeButton();
+
+        if (state.score > bestScore) {
+          bestScore = state.score;
+          try {
+            localStorage.setItem(STORAGE_KEY, String(bestScore));
+          } catch (_) {}
+          hudBest.textContent = bestScore.toLocaleString();
+        }
+
+        const rank = getRankInfo(state.score);
+        finalScoreEl.textContent = `${state.score.toLocaleString()}点`;
+        finalRankEl.textContent = `${rank.label} — ${rank.comment}`;
+        statServedEl.textContent = `盛り付け: ${state.servedCount}杯`;
+        statPerfectEl.textContent = `ジャスト: ${state.perfectCount}回`;
+        statSpillEl.textContent = `こぼし: ${state.spillCount}回`;
+
+        updateHud();
+        resultOverlay.classList.remove("hidden");
+        playServeSound(state.score >= 1800);
+      }
+
+      function spawnPopup(x, y, text, color = "#f5b727") {
+        state.popups.push({
+          x,
+          y,
+          vy: -48,
+          text,
+          color,
+          life: 1.0
+        });
+      }
+
+      function spawnWaterSplash(x, y, count, isNoodle = false) {
+        for (let i = 0; i < count; i++) {
+          const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.9;
+          const speed = (isNoodle ? 90 : 120) + Math.random() * 210;
+          state.particles.push({
+            x: x + (Math.random() - 0.5) * 70,
+            y: y + (Math.random() - 0.5) * 14,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - (isNoodle ? 60 : 30),
+            size: isNoodle ? 4 + Math.random() * 3 : 3 + Math.random() * 4,
+            color: isNoodle ? "#f7d477" : "#9be4ff",
+            life: 0.65 + Math.random() * 0.35,
+            maxLife: 1.0,
+            isNoodle
+          });
+        }
+      }
+
+      function applyShakeImpulse(deltaY, dt) {
+        if (state.phase !== "playing" || state.recovering || state.reloading) return;
+        const absDy = Math.abs(deltaY);
+        if (absDy < 1.2) return;
+
+        const speed = absDy / Math.max(dt, 0.008);
+        const norm = Math.min(speed / 1600, 1.8);
+        const sign = Math.sign(deltaY);
+
+        state.basketVy += sign * Math.min(absDy * 26, 780);
+        state.basketTilt = Math.max(-0.22, Math.min(0.22, state.basketTilt + sign * 0.04));
+
+        // 麺ノードに慣性と横揺れ波紋を与える
+        for (const strand of state.mesh) {
+          for (let i = 0; i < strand.nodes.length; i++) {
+            const n = strand.nodes[i];
+            const phaseFactor = 0.75 + 0.35 * Math.sin(i * 0.9 + strand.phase);
+            n.vy += sign * Math.min(absDy * 24, 720) * phaseFactor * 0.78;
+            n.vx += (i - (strand.nodes.length - 1) * 0.5) * norm * 28;
+          }
+        }
+
+        const drainGain = Math.min(absDy * 0.42, 16) * (0.75 + Math.min(norm, 1.2) * 0.35);
+        state.drain = Math.min(100, state.drain + drainGain);
+
+        if (norm > 0.72) {
+          const excess = norm - 0.72;
+          state.spill = Math.min(100, state.spill + excess * absDy * 0.42);
+        }
+
+        if (state.shakeCooldown <= 0 && absDy > 6) {
+          state.shakeCooldown = 0.075;
+          playShakeSound(norm);
+          spawnWaterSplash(width * 0.5, getBasketCenterY() + 14, Math.ceil(2 + norm * 4), false);
+        }
+
+        if (state.spill >= 100) {
+          triggerSpill();
+        }
+        syncServeButton();
+      }
+
+      function triggerSpill() {
+        state.spillCount += 1;
+        state.combo = 0;
+        state.score = Math.max(0, state.score - 120);
+        state.recovering = true;
+        state.recoverTimer = 0.65;
+        state.spill = 100;
+
+        // 一部の麺ノードが楕円ボウル外へ飛び出す
+        for (const strand of state.mesh) {
+          strand.nodes.forEach((n, idx) => {
+            if ((idx === 0 || idx === strand.nodes.length - 1) && Math.random() < 0.65) {
+              n.escaped = true;
+              n.vx = (idx === 0 ? -1 : 1) * (130 + Math.random() * 140);
+              n.vy = -220 - Math.random() * 130;
+            }
+          });
+        }
+
+        playSpillSound();
+        spawnWaterSplash(width * 0.5, getBasketCenterY(), 18, true);
+        spawnPopup(width * 0.5, getBasketCenterY() - 36, "こぼれた！ -120", "#ff5544");
+        updateHud();
+        syncServeButton();
+      }
+
+      function serveNoodle() {
+        if (state.phase !== "playing" || state.recovering || state.reloading) return;
+
+        // 湯切り60%未満では盛り付け不可（連打荒稼ぎ防止）
+        if (state.drain < MIN_SERVE_DRAIN) {
+          if (state.blockWarnCooldown <= 0) {
+            state.blockWarnCooldown = 0.35;
+            playBlockedSound();
+            spawnPopup(
+              width * 0.5,
+              getBasketCenterY() - 38,
+              `まだお湯が多すぎる！(${Math.round(state.drain)}% / 60%以上必要)`,
+              "#6ec6ff"
+            );
+          }
+          return;
+        }
+
+        const d = state.drain;
+        let basePoints = 0;
+        let tag = "";
+        let color = "#f5b727";
+        let isPerfect = false;
+
+        if (d >= 82 && d <= 98) {
+          isPerfect = true;
+          state.perfectCount += 1;
+          state.combo += 1;
+          basePoints = 450;
+          tag = "ジャスト湯切り！";
+          color = "#5cf29c";
+        } else if (d >= MIN_SERVE_DRAIN && d < 82) {
+          state.combo += 1;
+          basePoints = 220;
+          tag = "しっかり湯切り！";
+          color = "#ffd24c";
+        } else {
+          state.combo = Math.max(0, state.combo - 1);
+          basePoints = 110;
+          tag = "振りすぎパサつき…";
+          color = "#ff9f43";
+        }
+
+        const comboBonus = Math.max(0, state.combo - 1) * 60;
+        const totalGain = basePoints + comboBonus;
+        state.score += totalGain;
+        state.servedCount += 1;
+        state.bowlsServed += 1;
+        state.tossAnim = 1.0;
+
+        // 盛り付け時に麺ノードが楕円ボウル内で跳ね上がる
+        for (const strand of state.mesh) {
+          for (const n of strand.nodes) {
+            n.vy = -260 - Math.random() * 90;
+          }
+        }
+
+        playServeSound(isPerfect);
+        spawnPopup(
+          width * 0.5,
+          getBasketCenterY() - 45,
+          state.combo >= 2 ? `${tag} +${totalGain} (${state.combo}コンボ)` : `${tag} +${totalGain}`,
+          color
+        );
+
+        // 盛り付け後リロード時間を設けて連打を防止
+        state.reloading = true;
+        state.reloadTimer = SERVE_RELOAD_SEC;
+        state.drain = 0;
+        state.spill = 0;
+        updateHud();
+        syncServeButton();
+      }
+
+      function stepNoodlePhysics(dt) {
+        const { rx, ry } = getBasketDims();
+        // 麺ノードが収まる有効楕円半径（ザルのフチより少し内側）
+        const innerRx = rx * 0.78;
+        const innerRy = ry * 0.66;
+        const restDist = (innerRx * 1.45) / 8;
+
+        for (const strand of state.mesh) {
+          const nodes = strand.nodes;
+
+          for (let i = 0; i < nodes.length; i++) {
+            const n = nodes[i];
+            if (n.escaped) {
+              n.vy += 680 * dt;
+              n.x += n.vx * dt;
+              n.y += n.vy * dt;
+              continue;
+            }
+
+            // 中心への弱い復元力＋ザル傾斜による横滑り＋上下バネ
+            const pullX = -16 * (n.x - n.restX * 0.85) + state.basketTilt * 240;
+            const pullY = -125 * (n.y - n.restY) + 38 * dt;
+
+            n.vx += pullX * dt;
+            n.vy += pullY * dt;
+
+            // 粘性減衰
+            const damp = Math.pow(0.08, dt);
+            n.vx *= damp;
+            n.vy *= damp;
+
+            n.x += n.vx * dt;
+            n.y += n.vy * dt;
+          }
+
+          // 隣接ノード間の距離バネ拘束（2反復で麺のつながりを自然にする）
+          for (let iter = 0; iter < 2; iter++) {
+            for (let i = 0; i < nodes.length - 1; i++) {
+              const a = nodes[i];
+              const b = nodes[i + 1];
+              if (a.escaped || b.escaped) continue;
+              const dx = b.x - a.x;
+              const dy = b.y - a.y;
+              const dist = Math.hypot(dx, dy) || 0.001;
+              const diff = (dist - restDist) / dist;
+              const corrX = dx * diff * 0.35;
+              const corrY = dy * diff * 0.35;
+              a.x += corrX;
+              a.y += corrY;
+              b.x -= corrX;
+              b.y -= corrY;
+            }
+          }
+
+          // 楕円ボウル壁面との衝突判定・反発・摩擦
+          for (const n of nodes) {
+            if (n.escaped) continue;
+            const nx = n.x / innerRx;
+            const ny = n.y / innerRy;
+            const r2 = nx * nx + ny * ny;
+
+            if (r2 > 1.0) {
+              const r = Math.sqrt(r2);
+              // 楕円外向きの法線近似
+              let gx = nx / innerRx;
+              let gy = ny / innerRy;
+              const gLen = Math.hypot(gx, gy) || 1;
+              gx /= gLen;
+              gy /= gLen;
+
+              // 楕円内へ押し戻し
+              n.x = (n.x / r);
+              n.y = (n.y / r);
+
+              // 法線速度成分を反射＆接線摩擦を適用
+              const vn = n.vx * gx + n.vy * gy;
+              if (vn > 0) {
+                const restitution = 0.32;
+                n.vx -= (1 + restitution) * vn * gx;
+                n.vy -= (1 + restitution) * vn * gy;
+              }
+              n.vx *= 0.86;
+              n.vy *= 0.86;
+            }
+          }
+        }
+      }
+
+      function updateHud() {
+        const displayTime = Math.max(0, state.timeLeft).toFixed(1);
+        hudTime.textContent = displayTime;
+        hudTime.classList.toggle("time-urgent", state.phase === "playing" && state.timeLeft <= 4.0);
+        hudScore.textContent = state.score.toLocaleString();
+        hudCombo.textContent = `${state.combo}x / ${state.servedCount}杯`;
+      }
+
+      function getCanvasY(clientY) {
+        const rect = canvas.getBoundingClientRect();
+        return clientY - rect.top;
+      }
+
+      canvas.addEventListener("pointerdown", (e) => {
+        if (state.phase !== "playing") return;
+        state.pointerActive = true;
+        state.lastPointerY = getCanvasY(e.clientY);
+        state.tapDir *= -1;
+        applyShakeImpulse(state.tapDir * 24, 0.016);
+        try {
+          canvas.setPointerCapture(e.pointerId);
+        } catch (_) {}
+      });
+
+      canvas.addEventListener("pointermove", (e) => {
+        if (!state.pointerActive || state.phase !== "playing") return;
+        const y = getCanvasY(e.clientY);
+        const dy = y - state.lastPointerY;
+        state.lastPointerY = y;
+        applyShakeImpulse(dy, 0.016);
+      });
+
+      function endPointer() {
+        state.pointerActive = false;
+      }
+      canvas.addEventListener("pointerup", endPointer);
+      canvas.addEventListener("pointercancel", endPointer);
+
+      window.addEventListener("keydown", (e) => {
+        if (e.code === "ArrowUp" || e.code === "KeyW") {
+          e.preventDefault();
+          state.keys.up = true;
+          if (state.phase === "playing" && state.keys.lastDir !== -1) {
+            applyShakeImpulse(-26, 0.016);
+            state.keys.lastDir = -1;
+          }
+        } else if (e.code === "ArrowDown" || e.code === "KeyS") {
+          e.preventDefault();
+          state.keys.down = true;
+          if (state.phase === "playing" && state.keys.lastDir !== 1) {
+            applyShakeImpulse(26, 0.016);
+            state.keys.lastDir = 1;
+          }
+        } else if (e.code === "Space") {
+          e.preventDefault();
+          if (state.phase === "playing") {
+            serveNoodle();
+          } else if (state.phase === "title" || state.phase === "result") {
+            startGame();
+          }
+        }
+      });
+
+      window.addEventListener("keyup", (e) => {
+        if (e.code === "ArrowUp" || e.code === "KeyW") {
+          state.keys.up = false;
+          if (!state.keys.down) state.keys.lastDir = 0;
+        } else if (e.code === "ArrowDown" || e.code === "KeyS") {
+          state.keys.down = false;
+          if (!state.keys.up) state.keys.lastDir = 0;
+        }
+      });
+
+      serveBtn.addEventListener("click", () => {
+        if (state.phase === "playing") {
+          serveNoodle();
+        }
+      });
+
+      startBtn.addEventListener("click", startGame);
+      retryBtn.addEventListener("click", startGame);
+
+      function getBasketCenterY() {
+        return height * 0.5 + state.basketY;
+      }
+
+      let lastTimestamp = performance.now();
+      let keyOscPhase = 0;
+
+      function update(now) {
+        const rawDt = (now - lastTimestamp) / 1000;
+        lastTimestamp = now;
+        const dt = Math.min(rawDt, 0.05);
+
+        if (state.blockWarnCooldown > 0) {
+          state.blockWarnCooldown -= dt;
+        }
+
+        if (state.phase === "playing") {
+          state.timeLeft -= dt;
+          const ceilSec = Math.ceil(state.timeLeft);
+          if (ceilSec < state.lastWholeSecond && ceilSec > 0) {
+            state.lastWholeSecond = ceilSec;
+            playTickSound(ceilSec <= 3);
+          }
+
+          if (state.timeLeft <= 0) {
+            finishGame();
+          }
+
+          if (state.keys.up || state.keys.down) {
+            keyOscPhase += dt * 34;
+            const wave = Math.sin(keyOscPhase);
+            applyShakeImpulse(wave * 11, dt);
+          }
+
+          if (state.reloading) {
+            state.reloadTimer -= dt;
+            if (state.reloadTimer <= 0) {
+              resetBatch(false);
+              syncServeButton();
+            }
+          } else if (!state.recovering) {
+            state.spill = Math.max(0, state.spill - dt * 15);
+          } else {
+            state.recoverTimer -= dt;
+            if (state.recoverTimer <= 0) {
+              resetBatch(false);
+              syncServeButton();
+            }
+          }
+        }
+
+        if (state.shakeCooldown > 0) {
+          state.shakeCooldown -= dt;
+        }
+
+        const springK = 180;
+        const damping = 16;
+        const accel = -springK * state.basketY - damping * state.basketVy;
+        state.basketVy += accel * dt;
+        state.basketY += state.basketVy * dt;
+        state.basketY = Math.max(-65, Math.min(65, state.basketY));
+        state.basketTilt *= Math.pow(0.04, dt);
+
+        stepNoodlePhysics(dt);
+
+        if (state.tossAnim > 0) {
+          state.tossAnim = Math.max(0, state.tossAnim - dt * 3.2);
+        }
+
+        for (let i = state.particles.length - 1; i >= 0; i--) {
+          const p = state.particles[i];
+          p.life -= dt;
+          if (p.life <= 0) {
+            state.particles.splice(i, 1);
+            continue;
+          }
+          p.vy += 580 * dt;
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+        }
+
+        for (let i = state.popups.length - 1; i >= 0; i--) {
+          const pop = state.popups[i];
+          pop.life -= dt * 1.15;
+          if (pop.life <= 0) {
+            state.popups.splice(i, 1);
+            continue;
+          }
+          pop.y += pop.vy * dt;
+          pop.vy *= 0.94;
+        }
+
+        draw();
+        if (state.phase === "playing") {
+          updateHud();
+        }
+        requestAnimationFrame(update);
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, width, height);
+
+        const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
+        bgGrad.addColorStop(0, "#24170f");
+        bgGrad.addColorStop(0.65, "#19100b");
+        bgGrad.addColorStop(1, "#110a07");
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, width, height);
+
+        ctx.save();
+        ctx.strokeStyle = "rgba(255, 244, 224, 0.04)";
+        ctx.lineWidth = 3;
+        for (let i = 0; i < 6; i++) {
+          const bx = width * (0.14 + i * 0.15);
+          const sway = Math.sin(performance.now() * 0.002 + i) * 14;
+          ctx.beginPath();
+          ctx.moveTo(bx, height * 0.72);
+          ctx.bezierCurveTo(bx + sway, height * 0.55, bx - sway, height * 0.35, bx + sway * 0.6, height * 0.12);
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        drawGauges();
+        drawServedBowls();
+        drawBasketAndNoodles();
+
+        for (const p of state.particles) {
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+          ctx.fillStyle = p.color;
+          if (p.isNoodle) {
+            ctx.beginPath();
+            ctx.roundRect(p.x - p.size, p.y - p.size * 0.45, p.size * 2, p.size * 0.9, 3);
+            ctx.fill();
+          } else {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+
+        for (const pop of state.popups) {
+          ctx.save();
+          ctx.globalAlpha = Math.min(1, pop.life * 1.3);
+          ctx.font = "900 17px 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif";
+          ctx.textAlign = "center";
+          ctx.lineWidth = 4;
+          ctx.strokeStyle = "rgba(0, 0, 0, 0.85)";
+          ctx.strokeText(pop.text, pop.x, pop.y);
+          ctx.fillStyle = pop.color;
+          ctx.fillText(pop.text, pop.x, pop.y);
+          ctx.restore();
+        }
+      }
+
+      function drawGauges() {
+        const isNarrow = width < 480;
+        const padX = Math.min(20, width * 0.04);
+        const topY = 14;
+        const barH = 18;
+
+        ctx.save();
+        ctx.font = `700 ${isNarrow ? 11 : 12}px 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif`;
+
+        if (isNarrow) {
+          const gaugeW = width - padX * 2;
+
+          ctx.fillStyle = "#e8d8c3";
+          ctx.textAlign = "left";
+          ctx.fillText(`湯切り ${Math.round(state.drain)}% (60%〜 狙い82〜98%)`, padX, topY + 11);
+
+          const bar1Y = topY + 15;
+          ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+          ctx.beginPath();
+          ctx.roundRect(padX, bar1Y, gaugeW, barH, 8);
+          ctx.fill();
+
+          const fill1W = (gaugeW * Math.min(100, state.drain)) / 100;
+          const drainGrad = ctx.createLinearGradient(padX, 0, padX + gaugeW, 0);
+          drainGrad.addColorStop(0, "#47b5ff");
+          drainGrad.addColorStop(0.6, "#88d498");
+          drainGrad.addColorStop(0.82, "#f5b727");
+          drainGrad.addColorStop(1, "#4ec27a");
+          ctx.fillStyle = drainGrad;
+          ctx.beginPath();
+          ctx.roundRect(padX, bar1Y, fill1W, barH, 8);
+          ctx.fill();
+
+          // 60%ライン表示
+          ctx.strokeStyle = "rgba(255,255,255,0.65)";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(padX + gaugeW * 0.6, bar1Y - 2);
+          ctx.lineTo(padX + gaugeW * 0.6, bar1Y + barH + 2);
+          ctx.stroke();
+
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = 2;
+          ctx.strokeRect(padX + gaugeW * 0.82, bar1Y - 1, gaugeW * 0.16, barH + 2);
+
+          const bar2Y = bar1Y + 34;
+          ctx.fillStyle = state.spill > 65 ? "#ff6b57" : "#e8d8c3";
+          ctx.fillText(`こぼれ危険度 ${Math.round(state.spill)}%`, padX, bar2Y - 4);
+
+          ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+          ctx.beginPath();
+          ctx.roundRect(padX, bar2Y, gaugeW, barH, 8);
+          ctx.fill();
+
+          const spillW = (gaugeW * Math.min(100, state.spill)) / 100;
+          ctx.fillStyle = state.spill > 70 ? "#ff3b2f" : "#ff8c3b";
+          ctx.beginPath();
+          ctx.roundRect(padX, bar2Y, spillW, barH, 8);
+          ctx.fill();
+        } else {
+          const gap = 16;
+          const gaugeW = Math.min(320, (width - padX * 2 - gap) / 2);
+          const rightX = width - padX - gaugeW;
+
+          ctx.fillStyle = "#e8d8c3";
+          ctx.textAlign = "left";
+          ctx.fillText(`湯切り: ${Math.round(state.drain)}% (60%〜 / 狙い82〜98%)`, padX, topY + 11);
+
+          const barY = topY + 17;
+          ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+          ctx.beginPath();
+          ctx.roundRect(padX, barY, gaugeW, barH, 9);
+          ctx.fill();
+
+          const fillW = (gaugeW * Math.min(100, state.drain)) / 100;
+          const drainGrad = ctx.createLinearGradient(padX, 0, padX + gaugeW, 0);
+          drainGrad.addColorStop(0, "#47b5ff");
+          drainGrad.addColorStop(0.6, "#88d498");
+          drainGrad.addColorStop(0.82, "#f5b727");
+          drainGrad.addColorStop(1, "#4ec27a");
+          ctx.fillStyle = drainGrad;
+          ctx.beginPath();
+          ctx.roundRect(padX, barY, fillW, barH, 9);
+          ctx.fill();
+
+          ctx.strokeStyle = "rgba(255,255,255,0.65)";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(padX + gaugeW * 0.6, barY - 2);
+          ctx.lineTo(padX + gaugeW * 0.6, barY + barH + 2);
+          ctx.stroke();
+
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = 2;
+          ctx.strokeRect(padX + gaugeW * 0.82, barY - 1, gaugeW * 0.16, barH + 2);
+
+          ctx.fillStyle = state.spill > 65 ? "#ff6b57" : "#e8d8c3";
+          ctx.fillText(`こぼれ危険度: ${Math.round(state.spill)}%`, rightX, topY + 11);
+
+          ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+          ctx.beginPath();
+          ctx.roundRect(rightX, barY, gaugeW, barH, 9);
+          ctx.fill();
+
+          const spillW = (gaugeW * Math.min(100, state.spill)) / 100;
+          ctx.fillStyle = state.spill > 70 ? "#ff3b2f" : "#ff8c3b";
+          ctx.beginPath();
+          ctx.roundRect(rightX, barY, spillW, barH, 9);
+          ctx.fill();
+
+          ctx.strokeStyle = "rgba(255,255,255,0.22)";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.roundRect(padX, barY, gaugeW, barH, 9);
+          ctx.roundRect(rightX, barY, gaugeW, barH, 9);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      function drawBasketAndNoodles() {
+        const cx = width * 0.5;
+        const cy = getBasketCenterY() - state.tossAnim * 48;
+        const { rx, ry } = getBasketDims();
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(state.basketTilt);
+
+        // 持ち手
+        ctx.fillStyle = "#8c5828";
+        ctx.beginPath();
+        ctx.roundRect(rx * 0.94, -7, Math.min(64, width * 0.12), 14, 7);
+        ctx.fill();
+        ctx.strokeStyle = "#573312";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // 楕円ボウルの奥側（底＆網）
+        ctx.fillStyle = "rgba(25, 17, 11, 0.78)";
+        ctx.beginPath();
+        ctx.ellipse(0, 2, rx * 0.96, ry * 0.88, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "rgba(235, 200, 145, 0.24)";
+        ctx.lineWidth = 1.1;
+        for (let gx = -rx * 0.7; gx <= rx * 0.7; gx += 16) {
+          const maxGy = ry * 0.82 * Math.sqrt(Math.max(0, 1 - (gx / (rx * 0.94)) ** 2));
+          ctx.beginPath();
+          ctx.moveTo(gx, 2 - maxGy);
+          ctx.lineTo(gx, 2 + maxGy);
+          ctx.stroke();
+        }
+
+        // 楕円ボウル内の麺ノード描画
+        const moisture = 1 - state.drain / 100;
+        const noodleColor = moisture > 0.35 ? "#f5df93" : "#f7c948";
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+
+        for (const strand of state.mesh) {
+          const nodes = strand.nodes;
+          if (nodes.length < 2) continue;
+
+          const drawSmoothNodes = () => {
+            ctx.beginPath();
+            ctx.moveTo(nodes[0].x, nodes[0].y);
+            for (let i = 1; i < nodes.length - 1; i++) {
+              const midX = (nodes[i].x + nodes[i + 1].x) * 0.5;
+              const midY = (nodes[i].y + nodes[i + 1].y) * 0.5;
+              ctx.quadraticCurveTo(nodes[i].x, nodes[i].y, midX, midY);
+            }
+            const last = nodes[nodes.length - 1];
+            ctx.lineTo(last.x, last.y);
+          };
+
+          ctx.strokeStyle = strand.tone === 0 ? "#b88112" : "#9e6b0a";
+          ctx.lineWidth = 4.4;
+          drawSmoothNodes();
+          ctx.stroke();
+
+          ctx.strokeStyle = strand.tone === 0 ? noodleColor : "#ffe178";
+          ctx.lineWidth = 2.4;
+          drawSmoothNodes();
+          ctx.stroke();
+        }
+
+        // 楕円ボウルの手前フチ（麺を包み込む立体感）
+        ctx.strokeStyle = "#d99b43";
+        ctx.lineWidth = 5.5;
+        ctx.beginPath();
+        ctx.ellipse(0, 2, rx, ry, 0, 0.08, Math.PI - 0.08);
+        ctx.stroke();
+
+        ctx.strokeStyle = "rgba(232, 178, 92, 0.55)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(0, 2, rx, ry, 0, Math.PI + 0.08, Math.PI * 2 - 0.08);
+        ctx.stroke();
+
+        if (state.spill > 65 || state.recovering) {
+          ctx.strokeStyle = "#ff4535";
+          ctx.lineWidth = 2.5;
+          ctx.setLineDash([6, 4]);
+          ctx.beginPath();
+          ctx.ellipse(0, 2, rx * 1.05, ry * 1.15, 0, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        ctx.restore();
+
+        ctx.save();
+        ctx.font = "700 12.5px 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillStyle = state.recovering ? "#ff6b57" : "rgba(255, 240, 218, 0.72)";
+        const statusMsg = state.recovering
+          ? "麺を拾い直し中…！"
+          : state.reloading
+            ? "次の麺をセット中…"
+            : "ここを上下にシャカシャカ振ろう！";
+        ctx.fillText(statusMsg, cx, height - 18);
+        ctx.restore();
+      }
+
+      function drawServedBowls() {
+        const countToShow = Math.min(state.bowlsServed, 8);
+        if (countToShow <= 0) return;
+
+        ctx.save();
+        const baseX = Math.min(width - 32, width - 38);
+        const baseY = height - 42;
+
+        for (let i = 0; i < countToShow; i++) {
+          const bx = baseX - (i % 4) * 34;
+          const by = baseY - Math.floor(i / 4) * 28;
+
+          ctx.fillStyle = "#d93829";
+          ctx.beginPath();
+          ctx.arc(bx, by, 11, 0, Math.PI);
+          ctx.fill();
+
+          ctx.fillStyle = "#f7cb48";
+          ctx.beginPath();
+          ctx.arc(bx, by, 7.5, Math.PI, 0);
+          ctx.fill();
+
+          ctx.strokeStyle = "#fff3d6";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(bx, by, 11, 0.15, Math.PI - 0.15);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      requestAnimationFrame(update);
+    })();
+  </script>
+</body>
+</html>
